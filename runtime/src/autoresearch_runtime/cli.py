@@ -6,7 +6,7 @@ import sys
 import threading
 
 from .controller import Controller
-from .review import encode, server
+from .review import Inbox, encode, server
 from .store import migrate
 
 
@@ -39,6 +39,23 @@ def main():
     try:
         if args.command == "migrate":
             result = migrate(args.source, args.store, args.project)
+        elif args.command == "review":
+            # Prototype inboxes have no runtime contract. Review reads immutable
+            # stored snapshots and does not dispatch experimental jobs.
+            inbox = Inbox(args.store, args.store)
+            if args.operation == "status":
+                result = inbox.snapshot()
+            elif args.operation == "export":
+                if args.output is None:
+                    raise ValueError("--output is required")
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(inbox.html(offline=True))
+                result = {"output": str(args.output)}
+            else:
+                httpd = server(inbox, args.port)
+                print(f"Review inbox: http://127.0.0.1:{httpd.server_port}", flush=True)
+                httpd.serve_forever()
+                result = {}
         else:
             c = Controller(args.store, json.loads(args.contract.read_text()) if args.command == "init" else None)
             if args.command == "init":
@@ -56,19 +73,6 @@ def main():
                 threading.Thread(target=httpd.serve_forever, daemon=True).start()
                 print(f"Review inbox: http://127.0.0.1:{httpd.server_port}", file=sys.stderr, flush=True)
                 result = c.run(idle_timeout=args.idle_timeout)
-            elif args.operation == "status":
-                result = c.inbox.snapshot()
-            elif args.operation == "export":
-                if args.output is None:
-                    raise ValueError("--output is required")
-                args.output.parent.mkdir(parents=True, exist_ok=True)
-                args.output.write_text(c.inbox.html(offline=True))
-                result = {"output": str(args.output)}
-            else:
-                httpd = server(c.inbox, args.port)
-                print(f"Review inbox: http://127.0.0.1:{httpd.server_port}", flush=True)
-                httpd.serve_forever()
-                result = {}
         print(encode(result))
         return 0
     except KeyboardInterrupt:

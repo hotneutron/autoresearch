@@ -263,6 +263,18 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaisesRegex(Conflict, "newer store schema"):
             Controller(self.store)
 
+    def test_A02_migrated_review_cli_needs_no_campaign_contract(self):
+        import subprocess
+        c = self.controller()
+        c.submit("one")
+        with c.inbox.connect() as db:
+            packet = json.loads(db.execute("SELECT body FROM packets").fetchone()[0])
+        legacy = Inbox(self.root / "legacy", self.store)
+        legacy.publish(packet)
+        output = subprocess.check_output([sys.executable, "-m", "autoresearch_runtime.cli", "--store",
+                                          str(legacy.directory), "review", "status"], text=True)
+        self.assertEqual(json.loads(output)["packets"][0]["id"], packet["id"])
+
     def test_A13_child_retains_lease_if_worker_is_killed(self):
         import signal
         from autoresearch_runtime.worker import alive

@@ -80,7 +80,8 @@ protocol. Timeout terminates the entire child process group and invalidates the 
 Back up an idle, reconciled store with `autoresearch_runtime.store.backup`, which
 uses SQLite's online backup API rather than copying a live database file without
 its WAL. `migrate` imports a prototype inbox into a new directory and preserves
-packet bytes, feedback, receipts and hashes. Existing runtime campaigns retain
+packet bytes, feedback, receipts and hashes. The `review` command also works directly
+on migrated inboxes that have no campaign contract. Existing runtime campaigns retain
 their exact source identity; do not upgrade code beneath an active campaign. To
 rollback, use the old runtime and its pre-upgrade backup at the original paths.
 
@@ -112,3 +113,4 @@ sibling repo it is then. execute the plan with a tracker by creating our own for
 | Revision | Timestamp | Change |
 |---|---|---|
 | r1 | 2026-10-09 14:29 -0700 | Documented installed runtime, inbox, contract/agent interface, recovery and explicit unsupported execution boundaries. |
+| r2 | 2026-10-09 14:41 -0700 | Documented review access to migrated inboxes without a campaign contract; patch release 0.1.1 retains the frozen-execution identity requirement. |
