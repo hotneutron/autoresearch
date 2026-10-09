@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Research review inbox</title>
+<style>
+:root{color-scheme:light;--ink:#192c35;--muted:#536770;--line:#d7e0df;--paper:#fff;--bg:#f3f6f4;--teal:#086a65;--red:#a83933;--amber:#865508}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:var(--teal)}header{padding:28px 5vw 18px;background:#153d3e;color:white}header h1{font-size:28px;letter-spacing:-.7px;margin:2px 0 8px}header p{margin:0;max-width:880px;color:#d5e6e2}.eyebrow{text-transform:uppercase;letter-spacing:1.7px;font-size:11px;font-weight:750}.toolbar{padding:16px 5vw;display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);background:white}.toolbar input{flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:7px}.toolbar select{padding:9px;border:1px solid var(--line);border-radius:7px}.count{font-size:13px;padding:6px 10px;border-radius:6px;background:#e7f1ed}.layout{display:grid;grid-template-columns:minmax(280px,350px) minmax(0,1fr);max-width:1460px;margin:auto;gap:22px;padding:24px 4vw}.list{display:grid;gap:12px;align-content:start}.card{background:white;border:1px solid var(--line);border-radius:10px;padding:17px;text-align:left;color:var(--ink);width:100%}.card.selected{border:2px solid var(--teal);padding:16px;box-shadow:0 4px 18px #133d3d0c}.card h3{margin:10px 0 7px;font-size:17px;line-height:1.35}.card p{margin:8px 0;font-size:13px}.small{font-size:12px;color:var(--muted)}.badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.2px;border-radius:4px;padding:3px 7px;background:#e9eeed;margin-right:5px;margin-bottom:4px}.ready,.valid{background:#dcf1e8;color:#146247}.waiting{background:#fff0d3;color:var(--amber)}.blocked,.invalid,.rejected{background:#fbe5e1;color:var(--red)}.paused,.diagnostic{background:#e9e5f4;color:#635086}.unread{float:right;color:var(--teal);font-size:11px;font-weight:750}.report{background:white;border:1px solid var(--line);border-radius:12px;padding:25px 30px;min-width:0}.report h2{font-size:26px;line-height:1.3;margin:10px 0}.report h3{font-size:17px;margin:24px 0 9px}.report p{margin:9px 0}.lead{font-size:19px;line-height:1.5}.box{border-left:4px solid var(--teal);padding:12px 16px;background:#f0f7f4;border-radius:0 6px 6px 0;margin:16px 0}.box.attention{border-color:#b87b13;background:#fff8e9}.box p{margin:3px 0}.split{display:grid;grid-template-columns:1fr 1fr;gap:18px}ul{padding-left:21px;margin:8px 0}li{margin:6px 0}details{border-top:1px solid var(--line);padding:16px 0}summary{font-weight:700;cursor:pointer}table{width:100%;border-collapse:collapse;font-size:13px;margin:14px 0}th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f5f8f6;font-size:11px;text-transform:uppercase;letter-spacing:.5px}.table-scroll{overflow:auto}.source{border:0;padding:0;background:none;color:var(--teal);text-decoration:underline;text-align:left}.action{border:1px solid var(--line);padding:12px;border-radius:7px;margin:8px 0}.action strong{font-size:14px}.action p{font-size:13px}.feedback{background:#f4f7f6;border:1px solid var(--line);padding:16px;border-radius:8px}.feedback label{display:block;font-size:13px;font-weight:650;margin:10px 0 5px}.feedback select,.feedback textarea{width:100%;padding:9px;border:1px solid #bccac7;border-radius:5px;background:white}.feedback textarea{resize:vertical;min-height:95px}.primary{padding:9px 15px;background:var(--teal);color:white;border:0;border-radius:6px;font-weight:650}.secondary{padding:8px 12px;border:1px solid #a9bfba;background:white;color:var(--teal);border-radius:6px}.primary:disabled{opacity:.5;cursor:not-allowed}.receipt{padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}.receipt blockquote{margin:5px 0;padding-left:12px;border-left:2px solid var(--line);white-space:pre-wrap}#notice{margin:0 5vw;padding:10px 0;color:var(--amber);font-size:13px}dialog{border:1px solid var(--line);border-radius:10px;max-width:1000px;width:90vw;max-height:85vh;padding:22px}dialog::backdrop{background:#173a3bb3}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}footer{padding:12px 5vw 28px;font-size:12px;color:var(--muted)}.empty{padding:30px;color:var(--muted)}.rule{color:var(--muted);font-size:12px}.topline{display:flex;align-items:center;justify-content:space-between;gap:8px}.dim{color:var(--muted)}@media(max-width:920px){.layout{grid-template-columns:1fr;padding:16px}.list{grid-template-columns:repeat(auto-fit,minmax(245px,1fr))}.report{padding:20px}.split{grid-template-columns:1fr}}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #c48e30;outline-offset:3px}
+</style>
+<style>@media(max-width:600px){.layout{grid-template-columns:minmax(0,1fr)}.list{display:flex;overflow-x:auto;min-width:0;padding:2px;scroll-snap-type:x proximity}.list .card{flex:0 0 88%;scroll-snap-align:start}.report h2{font-size:23px}}</style>
+</head>
+<body>
+<header><div class="eyebrow">P³ · human review</div><h1>Catch up. Decide where it matters.</h1><p>Read the finding first, inspect the evidence when needed, and send feedback while authorized work continues.</p></header>
+<div class="toolbar"><span class="count" id="decisions"></span><span class="count" id="ready"></span><input id="search" type="search" placeholder="Find a study, branch or result" aria-label="Search reports"><select id="filter" aria-label="Filter reports"><option value="all">All reports</option><option value="decision">Decisions needed</option><option value="unread">Unread</option></select><span id="mode" class="small"></span></div>
+<div id="notice" role="status" aria-live="polite"></div>
+<main class="layout"><nav class="list" id="list" aria-label="Experiment reports"></nav><article class="report" id="detail"></article></main>
+<dialog id="evidence"><div class="topline"><strong id="evidence-title"></strong><button class="secondary" id="close-evidence">Close</button></div><pre id="evidence-body"></pre></dialog>
+<footer id="footer"></footer>
+<script>
+const OFFLINE = __OFFLINE__;
+let data = __INITIAL_DATA__;
+let selected = location.hash.slice(1) || null, token = null, detailSignature = '', polling = false;
+const drafts = new Map();
+const $ = id => document.getElementById(id);
+const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const badge = (label, kind='') => `<span class="badge ${escape(kind)}">${escape(label)}</span>`;
+const bullets = values => `<ul>${values.map(v=>`<li>${escape(v)}</li>`).join('')}</ul>`;
+const date = value => new Date(value).toLocaleString();
+const waiting = packet => packet.actions.some(a=>a.state==='waiting');
+const notify = value => {$('notice').textContent=value;};
+
+function renderList(){
+  const query=$('search').value.toLowerCase(), filter=$('filter').value;
+  const packets=[...data.packets].sort((a,b)=>Number(waiting(b))-Number(waiting(a)) || Number(a.acknowledged)-Number(b.acknowledged) || b.published.localeCompare(a.published));
+  const decisionCount=packets.filter(waiting).length;
+  $('decisions').textContent=`${decisionCount} ${decisionCount===1?'study needs':'studies need'} a decision`;
+  $('ready').textContent=`${packets.reduce((n,p)=>n+p.actions.filter(a=>a.runnable).length,0)} next actions can continue`;
+  const shown=packets.filter(p=>(!query || [p.title,p.branch,p.takeaway].join(' ').toLowerCase().includes(query)) && (filter!=='decision'||waiting(p)) && (filter!=='unread'||!p.acknowledged));
+  $('list').innerHTML=shown.map(p=>`<button class="card ${p.id===selected?'selected':''}" data-packet="${escape(p.id)}">${!p.acknowledged?'<span class="unread">NEW</span>':''}${badge(waiting(p)?'Decision needed':p.review_mode==='advice'?'Advice welcome':'FYI',waiting(p)?'waiting':'ready')}<h3>${escape(p.title)}</h3><p>${escape(p.takeaway)}</p>${badge(p.evidence_status+' evidence',p.evidence_status)}<div class="small">${escape(p.branch)} · revision ${p.revision}</div><p class="small">${p.actions.filter(a=>a.runnable).length} actions ready · ${p.actions.filter(a=>a.state==='waiting').length} waiting</p></button>`).join('') || '<p class="empty">No matching reports.</p>';
+  document.querySelectorAll('[data-packet]').forEach(button=>button.onclick=()=>{selected=button.dataset.packet; detailSignature=''; render();});
+}
+
+function render(){
+  if(!data) return;
+  if(!data.packets.some(p=>p.id===selected)){
+    const old=selected;
+    selected=data.packets.find(waiting)?.id || data.packets[0]?.id;
+    if(old && drafts.get(old)?.comment) notify('A report was superseded. Your previous draft remains in this tab; review the new revision before submitting.');
+  }
+  if(selected && location.hash.slice(1)!==selected)history.replaceState(null,'','#'+selected);
+  renderList();
+  $('mode').textContent=OFFLINE?'Read-only snapshot':'Live · checks every 5 seconds';
+  $('footer').textContent=`Snapshot generated ${date(data.generated)}. ${data.packets.every(p=>p.historical)?'Historical reports with illustrative next actions. No research campaign is attached. ':''}Unanswered requests never grant approval. Only the named actions wait.`;
+  const p=data.packets.find(p=>p.id===selected);
+  if(!p){$('detail').innerHTML='<p class="empty">Publish a structured experiment packet to begin.</p>'; return;}
+  const events=data.feedback.filter(e=>e.branch===p.branch);
+  const signature=JSON.stringify([p,events]);
+  if(signature===detailSignature) return;
+  detailSignature=signature;
+  const canContinue=p.actions.filter(a=>a.runnable), requires=p.actions.filter(a=>a.state==='waiting');
+  const metrics=p.metrics.map(m=>`<tr><td><strong>${escape(m.name)}</strong><div class="rule">${escape(m.scope)}${m.unit?' · '+escape(m.unit):''}${Number.isInteger(m.support)?' · n='+m.support:''}</div></td><td>${escape(m.baseline)}</td><td>${escape(m.result)}</td><td>${escape(m.rule)}<br><button class="source" data-source="${m.source}">Evidence</button></td></tr>`).join('');
+  const changes=p.previous?`<details><summary>Compare with revision ${p.previous.revision}</summary><p class="small">Same branch. Different contracts or evaluation scopes must not share a leaderboard.</p><p><strong>Previous finding:</strong> ${escape(p.previous.takeaway)}</p><p><strong>Previous decision:</strong> ${escape(p.previous.decision)}</p><div class="table-scroll"><table><thead><tr><th>Metric</th><th>Previous</th><th>Current</th><th>Comparison</th></tr></thead><tbody>${p.metrics.map(m=>{const prior=p.previous.metrics.find(x=>x.name===m.name&&x.scope===m.scope);const comparable=prior&&p.contract_id===p.previous.contract_id&&(p.schema_version!==2||(m.comparison_key===prior.comparison_key&&m.baseline_id===prior.baseline_id&&m.unit===prior.unit));return `<tr><td>${escape(m.name)}</td><td>${escape(prior?.result||'Not reported')}</td><td>${escape(m.result)}</td><td>${comparable?'Same contract and scope':'Not established as comparable'}</td></tr>`;}).join('')}</tbody></table></div></details>`:'';
+  $('detail').innerHTML=`<div class="topline"><span class="eyebrow">30-second brief · ${escape(p.branch)}</span>${!OFFLINE?'<button id="ack" class="secondary">Mark read</button>':''}</div><h2>${escape(p.title)}</h2><div>${badge(p.evidence_status+' evidence',p.evidence_status)}${badge(p.decision)}${p.historical?badge('Historical evidence'):''}</div><p class="dim">${escape(p.question)}</p><p class="lead">${escape(p.takeaway)}</p><p><strong>Why it matters:</strong> ${escape(p.why_it_matters)}</p><div class="split"><section><h3>What changed</h3>${bullets(p.changed)}</section><section><h3>What this does not establish</h3>${bullets(p.limitations)}</section></div><div class="box ${requires.length?'attention':''}"><p><strong>${requires.length?'Decision requested':'Research can continue'}</strong></p><p>${escape(p.review_question)}</p><p><strong>Recommendation:</strong> ${escape(p.recommendation)}</p><p class="small">Review window: ${escape(p.review_by)}. This is a scheduling request, never an automatic approval deadline.</p></div><h3>What happens while you review</h3><p>${canContinue.length?'The following authorized actions are ready: '+escape(canContinue.map(a=>a.label).join('; '))+'.':'This branch has no runnable next action. Other eligible branches remain unaffected.'}</p>${p.actions.map(a=>`<div class="action">${badge(a.state,a.state)}<strong>${escape(a.label)}</strong><p>${escape(a.state_reason)}</p></div>`).join('')}<details><summary>3-minute evidence review · metrics, controls and scope</summary><div class="table-scroll"><table><thead><tr><th>Metric / scope</th><th>Baseline / required</th><th>Observed</th><th>Acceptance rule</th></tr></thead><tbody>${metrics}</tbody></table></div><p class="small">Evidence status describes the stated claim. A failed measurement gate does not establish that the model hypothesis is false.</p></details>${changes}<details><summary>Source reports · immutable evidence snapshots</summary><ul>${p.sources.map((s,i)=>`<li><button class="source" data-source="${i}">${escape(s.label)}</button><div class="small">${escape(s.path)} · SHA-256 ${escape(s.sha256.slice(0,12))}</div></li>`).join('')}</ul><p class="small">Report ${escape(p.id)} · revision ${p.revision} · contract ${escape(p.contract_id)} · published ${date(p.published)}</p></details><h3>Feedback at your pace</h3><div class="feedback">${OFFLINE?'<p>This exported snapshot is read-only. Open the local live inbox to send feedback.</p>':`<p class="small">A comment is advisory. Approval applies only to the selected action and this report revision. Pause takes effect at the next safe checkpoint of this branch.</p><form id="feedback-form"><label for="kind">Response</label><select id="kind"><option value="comment">Comment / suggest a change</option><option value="approve">Approve a named action</option><option value="reject">Decline a named action</option><option value="pause">Pause this branch at its next checkpoint</option><option value="resume">Resume this branch at its next checkpoint</option></select><div id="action-field"><label for="action-id">Action</label><select id="action-id"></select></div><label for="comment">Reason or suggestion</label><textarea id="comment" placeholder="What should the next experiment clarify?"></textarea><p id="feedback-effect" class="small"></p><button class="primary" id="submit" type="submit">Send feedback</button><span id="feedback-status" role="status" class="small"></span></form>`}</div><h3>Feedback receipts</h3>${events.length?events.map(e=>`<div class="receipt">${badge(e.status,e.status==='stale'?'waiting':e.status==='applied'?'ready':'')}<strong>${escape(e.body.kind)}${e.body.action_id?' · '+escape(e.body.action_id):''}</strong><div class="small">${date(e.created)} · ${escape(e.body.packet_id)}</div>${e.body.comment?`<blockquote>${escape(e.body.comment)}</blockquote>`:''}<div>${escape(e.reason||'Received. Waiting for the next safe checkpoint; no execution policy has changed yet.')}</div>${e.checkpoint?`<div class="small">Checkpoint: ${escape(e.checkpoint)}</div>`:''}</div>`).join(''):'<p class="small">No feedback yet. Reading is optional for already authorized actions.</p>'}`;
+  document.querySelectorAll('[data-source]').forEach(button=>button.onclick=()=>showEvidence(p,Number(button.dataset.source)));
+  if(OFFLINE) return;
+  $('ack').onclick=async()=>{try{await sendFeedback(p,{kind:'ack',action_id:null,comment:''});}catch(error){notify(error.message);}};
+  const draft=drafts.get(p.id)||{kind:'comment',action_id:'',comment:''};
+  $('kind').value=draft.kind; $('comment').value=draft.comment;
+  function updateForm(){
+    const kind=$('kind').value, actionNeeded=['approve','reject'].includes(kind);
+    const current=$('action-id').value||draft.action_id;
+    $('action-field').hidden=!actionNeeded;
+    const choices=p.actions.filter(a=>kind==='reject'||a.requires_approval&&a.eligible);
+    $('action-id').innerHTML='<option value="">Choose an action explicitly</option>'+choices.map(a=>`<option value="${escape(a.id)}">${escape(a.label)}</option>`).join('');
+    $('action-id').value=current;
+    $('feedback-effect').textContent=kind==='comment'?'Delivered at the next checkpoint as advice; work continues.':kind==='pause'?'Only this branch is paused, after its current complete experimental unit.':kind==='resume'?'Resumes this branch; failed gates and outstanding action approvals still apply.':'Applies to one action at the next checkpoint. Failed scientific gates remain binding.';
+    saveDraft();
+  }
+  function saveDraft(){drafts.set(p.id,{kind:$('kind').value,action_id:$('action-id').value,comment:$('comment').value});}
+  $('kind').onchange=updateForm; $('action-id').onchange=saveDraft; $('comment').oninput=saveDraft;
+  updateForm();
+  $('feedback-form').onsubmit=async event=>{
+    event.preventDefault();saveDraft();const value=drafts.get(p.id);
+    if(['approve','reject'].includes(value.kind)&&!value.action_id){$('feedback-status').textContent=' Select an action first.';return;}
+    if(value.kind==='comment'&&!value.comment.trim()){$('feedback-status').textContent=' Add a comment first.';return;}
+    $('submit').disabled=true;
+    try{await sendFeedback(p,{...value,action_id:['approve','reject'].includes(value.kind)?value.action_id:null});drafts.delete(p.id);detailSignature='';render();}
+    catch(error){$('feedback-status').textContent=' '+error.message;$('submit').disabled=false;}
+  };
+}
+
+async function sendFeedback(packet,value){
+  const request={id:crypto.randomUUID(),packet_id:packet.id,packet_hash:packet.hash,...value};
+  // Keep the same request id through transport retries: the server deduplicates it.
+  let response;
+  for(let attempt=0;attempt<2;attempt++){
+    try{response=await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json','X-Review-Token':token},body:JSON.stringify(request)});break;}
+    catch(error){if(attempt===1)throw error;}
+  }
+  const result=await response.json();
+  if(!response.ok)throw new Error(result.error||'Feedback could not be submitted');
+  notify('Feedback received. Its receipt below will show when the next safe checkpoint consumes it.');
+  await refresh();
+}
+
+async function showEvidence(packet,index){
+  const source=packet.sources[index];
+  $('evidence-title').textContent=source.label;
+  $('evidence-body').textContent='Loading evidence…';$('evidence').showModal();
+  try{
+    if(OFFLINE)$('evidence-body').textContent=source.snapshot;
+    else{const response=await fetch(`/evidence/${encodeURIComponent(packet.id)}/${index}`);if(!response.ok)throw new Error('Evidence unavailable');$('evidence-body').textContent=await response.text();}
+  }catch(error){$('evidence-body').textContent=error.message;}
+}
+
+async function refresh(){
+  if(OFFLINE){render();return;}
+  if(polling)return;polling=true;
+  try{const response=await fetch('/api/inbox');if(!response.ok)throw new Error('Inbox unavailable');data=await response.json();token=data.token;render();document.title=`${data.packets.filter(waiting).length} decisions · Research review`;}
+  catch(error){notify(`${error.message}. Reports remain visible; feedback has not been accepted.`);}
+  finally{polling=false;}
+}
+$('search').oninput=renderList;$('filter').onchange=renderList;
+$('close-evidence').onclick=()=>$('evidence').close();
+refresh();if(!OFFLINE)setInterval(refresh,5000);
+</script>
+</body>
+</html>

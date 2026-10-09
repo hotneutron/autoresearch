@@ -1,0 +1,114 @@
+# Autoresearch runtime and review inbox
+
+This optional subproject adds a durable local research queue and asynchronous
+review inbox to autoresearch. It installs independently of the upstream training
+example and has no Torch, CUDA, or project-specific dependencies.
+
+```bash
+python3.11 -m pip install ./runtime
+autoresearch --store /durable/campaign init campaign.json
+autoresearch --store /durable/campaign submit baseline
+autoresearch --store /durable/campaign run --port 8765 --idle-timeout 3600
+autoresearch --store /durable/campaign status
+autoresearch --store /durable/campaign review export --output report.html
+```
+
+`run` starts the built-in loopback inbox and services the queue. Its lifetime ends
+when all submitted work is settled, the idle timeout expires, or reconciliation
+is necessary. `review serve` keeps the inbox available separately. `resume`
+reconciles durable state and services pending feedback; it does not override a
+human branch pause. Stop the controller with Ctrl-C; detached experimental units
+keep running to their bounded timeout and retain resource leases. Reopen with the
+same installed runtime and store to reconcile their receipts.
+
+## Contract and agent interface
+
+A trusted project adapter creates `campaign.json`, with schema version 1, an ID,
+project root, verbatim user instruction, finite `max_units`/`max_seconds` budget,
+and a map of tasks. Each task declares branch, authorization, exact argv/cwd/env,
+timeout, SHA-256 source/input/interpreter closure, prerequisites and fixed JSON
+verifier checks. `{output}` expands to the unit's durable directory. The test
+fixture in `tests/test_runtime.py` is a complete executable contract example.
+
+The coding agent reads project policy, inspects results and submits a declared
+task ID. It cannot submit an eligibility flag, substitute argv, or alter a verifier.
+Each task has one logical unit identity; a new checkpoint cannot run it twice.
+Additional candidates or protocol changes require a new frozen campaign contract.
+This release executes declared candidate slates; it does not launch an LLM or
+silently grant arbitrary source mutation. Host integrations can use the JSON CLI
+for proposal/context exchange and `steer` for evidence-backed decisions.
+
+Process completion, evidence validity and scientific promotion are separate.
+Verifier checks compare exact JSON types and values. Missing/malformed outputs or
+failed prerequisites block dependent work even if a process returned zero.
+Only the trusted adapter establishes scientific meaning; the runtime enforces its
+fixed contract. Include imported code and environment dependencies in the closure.
+The worker verifies declared files before and after execution. Source hashing is
+not an operating-system sandbox against an adversarial same-user process.
+
+## Review behavior
+
+Packets publish automatically when units are prepared/completed. FYI and advice
+do not require acknowledgement. Explicit decisions cover only the named revision
+and action. Applied pauses persist across revisions; resume still checks all gates.
+Feedback queues during a unit and is consumed at completion or an idle boundary.
+Comments are delivered in checkpoint receipts; the agent records adoption or
+deferral in its steering record and subsequent report.
+
+The UI provides brief, metric and evidence layers; typed metric selectors validate
+reported values against released JSON snapshots. Units/support/baselines and
+comparison keys are explicit. Offline HTML embeds evidence and is read-only.
+The inbox is a local pull interface, not an email/Slack notification service.
+
+## Durability and recovery
+
+`inbox.sqlite3` stores both the review data and runtime ledger. Results enter a
+durable outbox before publication. Retrying publication preserves packet identity.
+The supervisor records launch intent, Linux process start identity and worker
+receipts; controller restarts never blindly rerun unknown jobs. A
+`reconciliation_required` unit needs process/evidence investigation before a new
+campaign can replace it. The interface deliberately does not offer a force-success
+or blind retry command.
+
+Local resource leases use `flock` under
+`~/.local/state/autoresearch/leases`, keyed by resource ID such as `gpu:<UUID>`.
+They are inherited by both worker and experimental child, so controller or worker
+loss cannot release a lease while the child still holds it. These leases coordinate
+participating runtimes; unrelated jobs must be checked by the project's measurement
+protocol. Timeout terminates the entire child process group and invalidates the unit.
+
+Back up an idle, reconciled store with `autoresearch_runtime.store.backup`, which
+uses SQLite's online backup API rather than copying a live database file without
+its WAL. `migrate` imports a prototype inbox into a new directory and preserves
+packet bytes, feedback, receipts and hashes. Existing runtime campaigns retain
+their exact source identity; do not upgrade code beneath an active campaign. To
+rollback, use the old runtime and its pre-upgrade backup at the original paths.
+
+Remote job execution and fresh confirmation are rejected in this release. They
+require qualified job and access-isolation adapters; a filename called `sealed`
+does not establish confidentiality. Generic queue tests are not hardware or
+statistical qualification of a project's experiment.
+
+## Verification
+
+```bash
+python3.11 -m unittest discover -s runtime/tests -v
+```
+
+Tests exercise the inherited inbox behavior plus durable queue/restart/outbox,
+source and environment drift, exact unit identity, budget/resource exclusion,
+timeout invalidation, typed metrics, migration and idle feedback. The package
+must also be installed as a wheel into an empty environment and run without the
+source checkout on `PYTHONPATH` before a release is pinned.
+
+## User Prompt, Verbatim
+
+```text
+sibling repo it is then. execute the plan with a tracker by creating our own fork of autoresearch first.
+```
+
+## Revision History
+
+| Revision | Timestamp | Change |
+|---|---|---|
+| r1 | 2026-10-09 14:29 -0700 | Documented installed runtime, inbox, contract/agent interface, recovery and explicit unsupported execution boundaries. |
