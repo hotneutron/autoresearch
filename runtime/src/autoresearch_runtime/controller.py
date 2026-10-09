@@ -83,7 +83,11 @@ class Controller:
             if task.get("backend", "local") != "local":
                 raise ValueError("Remote execution requires a registered, qualified job adapter")
             if task.get("confirmation"):
-                raise ValueError("Fresh confirmation requires an independently enforced access boundary")
+                from .confirmation import validate
+                validate(task["confirmation"])
+                expected = [sys.executable, "-m", "autoresearch_runtime.confirmation", "--spec", "{output}/confirmation.json", "--out", "{output}"]
+                if task["argv"] != expected:
+                    raise ValueError("Confirmation must use the fixed runtime proxy")
 
     @contextmanager
     def exclusive(self):
@@ -135,7 +139,15 @@ class Controller:
             task = expand(task, output)
             task["cwd"] = task.get("cwd", self.contract["project_root"])
             task["env"] = task.get("env", {"PATH": os.defpath, "PYTHONNOUSERSITE": "1"})
+            if task.get("confirmation"):
+                task["confirmation"]["request_id"] = self.contract["id"] + "." + unit_id
+                manifest = output / "confirmation.json"
+                atomic_json(manifest, task["confirmation"])
+                task["closure"][str(manifest)] = sha256(manifest)
             prerequisites = [verdict(r) for r in task.get("requires", [])]
+            if task.get("confirmation"):
+                from .confirmation import eligibility
+                prerequisites.append(eligibility(task["confirmation"]))
             eligible = all(r["passed"] for r in prerequisites)
             info = {"execution_status": "not_started", "scientific_pass": eligible,
                     "evidence_status": "diagnostic", "prerequisites": prerequisites,
@@ -281,6 +293,21 @@ class Controller:
                     reasons[row["id"]] = str(error)
                     continue
                 try:
+                    if task.get("confirmation"):
+                        from .confirmation import begin
+                        try:
+                            begin(task["confirmation"])
+                        except (OSError, ValueError) as error:
+                            reasons[row["id"]] = str(error)
+                            info = {"execution_status": "not_started", "scientific_pass": False,
+                                    "evidence_status": "invalid", "reason": str(error)}
+                            packet = self.packet(row["id"], task, info, pending=True)
+                            with self.inbox.connect(write=True) as db:
+                                db.execute("UPDATE units SET state='blocked',result=?,packet_id=? WHERE id=?",
+                                           (encode(info), packet["id"], row["id"]))
+                                db.execute("INSERT INTO outbox(id,body) VALUES (?,?)", (packet["id"], encode(packet)))
+                            self.flush()
+                            continue
                     with self.inbox.connect(write=True) as db:
                         current = self.inbox.latest(db, row["branch"])
                         action = next(a for a in json.loads(current["body"])["actions"] if a["id"] == row["id"])

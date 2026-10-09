@@ -85,10 +85,30 @@ on migrated inboxes that have no campaign contract. Existing runtime campaigns r
 their exact source identity; do not upgrade code beneath an active campaign. To
 rollback, use the old runtime and its pre-upgrade backup at the original paths.
 
-Remote job execution and fresh confirmation are rejected in this release. They
-require qualified job and access-isolation adapters; a filename called `sealed`
-does not establish confidentiality. Generic queue tests are not hardware or
-statistical qualification of a project's experiment.
+Remote job execution remains disabled pending a qualified query/cancel adapter.
+Generic queue tests are not hardware or statistical qualification of a project's experiment.
+
+## Procedural confirmation
+
+Runtime 0.2 supports an explicitly declared `procedural` confirmation contract.
+The project supplies a clean dedicated Git checkout, frozen commit, candidate and
+verifier hashes, dataset hash and stable subject identities, a project-wide
+exposure ledger, and an exact numeric/boolean aggregate output schema. The runtime
+dispatches its fixed confirmation proxy, which invokes the frozen verifier and
+releases only the validated aggregate result.
+
+Opening is recorded before evaluator launch. Dataset hashes, cohort IDs and
+overlapping subjects cannot be reopened by changing campaign names. Failed,
+interrupted or uncertain openings remain consumed. A fresh-confirmation contract
+rejects data declared previously exposed. Private verifier logs stay outside the
+review packet. Project policy must keep cohort namespaces and the ledger stable
+across branches and future tuning; the runtime cannot infer scientific group identity.
+
+This is procedural separation under a trusted account. It does not stop an agent
+with filesystem access from deliberately reading the label files. The project
+must state this limitation and avoid reading private labels/logs in development.
+Protocol fixtures and historical replays are labeled separately from actual fresh
+scientific confirmation. See `tests/test_confirmation.py` for the complete contract.
 
 ## Verification
 
@@ -108,9 +128,14 @@ source checkout on `PYTHONPATH` before a release is pinned.
 sibling repo it is then. execute the plan with a tracker by creating our own fork of autoresearch first.
 ```
 
+```text
+procedural separation is enough for now.
+```
+
 ## Revision History
 
 | Revision | Timestamp | Change |
 |---|---|---|
 | r1 | 2026-10-09 14:29 -0700 | Documented installed runtime, inbox, contract/agent interface, recovery and explicit unsupported execution boundaries. |
 | r2 | 2026-10-09 14:41 -0700 | Documented review access to migrated inboxes without a campaign contract; patch release 0.1.1 retains the frozen-execution identity requirement. |
+| r3 | 2026-10-09 14:50 -0700 | Added the explicitly accepted procedural confirmation contract, frozen checkout/verifier proxy, durable exposure ledger and aggregate-only release boundary. |
