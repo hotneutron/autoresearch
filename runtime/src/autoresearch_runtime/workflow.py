@@ -101,7 +101,7 @@ def validate_workflow(value, source_count):
 
 def overview_packet(document):
     """Build an advisory-only packet. Caller supplies meaning and released sources."""
-    object_fields(document, {"schema_version", "revision", "summary", "workflow", "sources", "prompt_verbatim"}, {"metrics"})
+    object_fields(document, {"schema_version", "revision", "summary", "workflow", "sources", "prompt_verbatim"}, {"metrics", "translations"})
     if type(document["schema_version"]) is not int or document["schema_version"] != 1:
         raise ValueError("Overview document schema_version must be 1")
     workflow = document["workflow"]
@@ -124,7 +124,8 @@ def overview_packet(document):
                 recommendation="Read Start here, then why each effort was tried, its evidence, uncertainty and next step.",
                 review_by="Next safe research checkpoint; no deadline grants approval", historical=False,
                 metrics=document.get("metrics", []), actions=[], sources=document["sources"], workflow=workflow,
-                prompt_verbatim=document["prompt_verbatim"])
+                prompt_verbatim=document["prompt_verbatim"],
+                **({"translations": document["translations"]} if "translations" in document else {}))
 
 
 def publish_overview(inbox, document):

@@ -5,13 +5,14 @@ const vm = require('node:vm');
 const html=fs.readFileSync(process.argv[2], 'utf8');
 const source=html.match(/<script>([\s\S]*?)<\/script>/)[1]
   .replace('__OFFLINE__','false').replace('__INITIAL_DATA__','null')
+  .replace('__ZH_CN__',fs.readFileSync(require('node:path').join(require('node:path').dirname(process.argv[2]),'zh-CN.json'),'utf8'))
   .replace('refresh();if(!OFFLINE)setInterval(refresh,5000);','');
 const nodes=new Map();
 function node(id){
-  if(!nodes.has(id))nodes.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,disabled:false,showModal(){},close(){}});
+  if(!nodes.has(id))nodes.set(id,{value:'',innerHTML:'',textContent:'',hidden:false,disabled:false,setAttribute(){},showModal(){},close(){}});
   return nodes.get(id);
 }
-const context=vm.createContext({document:{getElementById:node,querySelectorAll:()=>[],title:''},location:{hash:''},history:{replaceState(){}},setInterval(){},Map,JSON,Date,Number,String,crypto:{randomUUID(){return 'feedback-id';}}});
+const context=vm.createContext({document:{documentElement:{lang:'en'},getElementById:node,querySelectorAll:()=>[],title:''},location:{hash:'',search:'',href:'http://127.0.0.1:8765/'},history:{replaceState(){}},setInterval(){},URL,URLSearchParams,Map,JSON,Date,Number,String,crypto:{randomUUID(){return 'feedback-id';}}});
 vm.runInContext(source,context);
 const ordinary={id:'study-r2',branch:'study',contract_id:'campaign',title:'Image quality check',revision:2,published:'2026-10-12T12:00:00Z',actions:[],question:'Are smaller files clear?',takeaway:'Quality is unproven.',why_it_matters:'Speed is not enough.',evidence_status:'diagnostic',decision:'Wait',review_mode:'fyi',review_question:'Inspect quality first.',recommendation:'No deployment yet.',review_by:'Next checkpoint',changed:['Compared encoders'],limitations:['No unseen-image test'],metrics:[],sources:[{label:'Image result',path:'result.json',sha256:'a'.repeat(64)}],historical:false,acknowledged:false};
 const workflow={kind:'overview',project_id:'images',project_name:'Faster photographs',goal:'Upload pictures faster without losing detail.',background:'New here? Large pictures take time to send.',success_criteria:['Faster uploads and acceptable quality.'],status:'completed',current_question:'Does speed preserve quality?',next_checkpoint:'Independent quality evaluation.',updated_at:'2026-10-12T12:00:00Z',glossary:[{term:'codec',meaning:'An image encoding method.'}],efforts:[{id:'encoder',title:'Smaller images',status:'completed',question:'Can we reduce transfer time?',motivation:'Size is controllable.',approach:'Compare two encoders.',alternatives:[{option:'More bandwidth',reason:'Would confound this comparison.'}],outcome:'Smaller files; quality not proven.',decision:'Defer deployment',rationale:'A useful product needs quality, not only speed.',uncertainty:'Unseen pictures remain untested.',next_step:'Evaluate them.',evidence:[0],target:{packet_id:'study-r1',packet_hash:'b'.repeat(64),is_current:false,current_packet_id:'study-r2'}}],feedback_dispositions:[]};
@@ -33,4 +34,15 @@ node('filter').value='all';node('search').value='codec';vm.runInContext('renderL
 workflow.background='<img src=x onerror=alert(1)>';context.fixture.packets[1].workflow=workflow;node('search').value='';vm.runInContext("detailSignature='';render()",context);
 assert.ok(node('detail').innerHTML.includes('&lt;img'));assert.ok(!node('detail').innerHTML.includes('<img src=x'));
 vm.runInContext("selected='study-r2';detailSignature='';render()",context);assert.ok(!node('detail').innerHTML.includes('What we tried, why, and what we learned'));
-process.stdout.write('Workflow UI rendering checks passed.\n');
+overview.translations={'zh-CN':{title:'更快上传照片 · 从这里开始',workflow:{project_name:'更快上传照片',goal:'更快上传照片，同时保留细节。',efforts:[{id:'encoder',title:'更小的图片',motivation:'文件大小可以控制。',outcome:'文件变小；质量尚未得到证明。'}]}}};
+context.fixture.packets[1]=overview;
+vm.runInContext("selected='images-overview-r1';setLocale('zh-CN')",context);
+assert.equal(context.document.documentElement.lang,'zh-CN');
+for(const text of ['从这里开始 · 更快上传照片','为什么尝试：','文件大小可以控制。','如何安全地指导研究','来源证据和反馈保留原始语言'])assert.ok(node('detail').innerHTML.includes(text),text);
+assert.ok(node('kind').innerHTML.includes('仅作为建议'));
+const localized=vm.runInContext('viewPacket(fixture.packets[1])',context);
+assert.equal(localized.id,overview.id);assert.equal(localized.workflow.efforts[0].target.packet_id,'study-r1');assert.deepEqual(Array.from(localized.workflow.efforts[0].evidence),[0]);
+assert.equal(overview.workflow.efforts[0].motivation,'Size is controllable.');
+node('comment').value='请保留所有失败样本';node('comment').oninput();
+vm.runInContext("setLocale('en')",context);assert.equal(node('comment').value,'请保留所有失败样本');assert.ok(node('detail').innerHTML.includes('Start here · Faster photographs'));
+process.stdout.write('Workflow UI and Chinese localization rendering checks passed.\n');

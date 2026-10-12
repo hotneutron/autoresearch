@@ -82,6 +82,32 @@ A project integration may call this automatically at its legal checkpoints, but 
 
 **Study:** existing revision/hash-bound approval, hard eligibility checks and safe-boundary pause/resume continue unchanged. Follow the study link and inspect current evidence first. No response, overview acknowledgement, positive narrative or expired review window can approve an experiment.
 
+## English / Simplified Chinese presentation (0.3.1)
+
+Open `http://127.0.0.1:8765/?lang=zh-CN` or choose **简体中文** in the language selector. `?lang=en` switches back. The UI remembers the preference locally and uses the browser's Chinese locale only when there is no explicit choice. Ordinary packets remain readable with English fallback where translated project content is absent. Offline exports embed the same language resources.
+
+Optional packet or overview-document `translations` supplies **display-only** narrative text:
+
+```json
+{
+  "translations": {
+    "zh-CN": {
+      "title": "图片上传研究 · 从这里开始",
+      "takeaway": "质量评估尚未完成，因此不授权部署。",
+      "workflow": {
+        "project_name": "图片上传研究",
+        "goal": "更快上传图片，同时保持质量。",
+        "efforts": [{"id": "smaller-files", "motivation": "文件大小是可控制的传输时间影响因素。"}]
+      }
+    }
+  }
+}
+```
+
+Translated effort lists must match the canonical list length/order and exact effort IDs. Other translated arrays also align to their canonical items. Supported text fields are the packet's brief/recommendation/limitations, source labels, metric name/rule/scope, action labels, and workflow goal/background/glossary/effort narrative/feedback reasons. The locale validator rejects any attempt to change machine identities, evidence paths/hashes/indices, scientific numeric metric values, workflow status, action eligibility/approval flags or feedback identity. The entire translation is part of the immutable report hash; editing a translation requires a new revision. A source citation validates provenance, not accuracy of arbitrary translated prose; projects remain responsible for faithful translations.
+
+The browser overlays only these text fields. Feedback still submits canonical packet ID/hash, action ID and kind, even in Chinese. Evidence bodies and user comments retain original bytes and their original language; switching locale is not scientific reclassification or an automatic translation of private files. A language switch preserves the current feedback draft. No locale grants approval or changes safe checkpoint rules.
+
 ## Verification and release
 
 ```bash
@@ -106,3 +132,4 @@ make the inbox comprehensible even for a newcomer.
 | Revision | Timestamp | Change |
 |---|---|---|
 | r1 | 2026-10-12 12:08 -0700 | Documented reusable overview format, newcomer context, evidence-linked effort rationale, explicit feedback disposition and unchanged execution boundaries, with a non-H3 example. |
+| r2 | 2026-10-12 12:56 -0700 | Documented Simplified Chinese selector, strict display-only translation schema and canonical evidence/feedback semantics. |

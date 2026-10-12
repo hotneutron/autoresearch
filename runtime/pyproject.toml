@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoresearch-runtime"
-version = "0.3.0"
+version = "0.3.1"
 description = "Durable research execution and asynchronous review inbox"
 requires-python = ">=3.11"
 dependencies = []
@@ -17,4 +17,4 @@ autoresearch-review = "autoresearch_runtime.review:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-autoresearch_runtime = ["inbox.html"]
+autoresearch_runtime = ["inbox.html", "zh-CN.json"]

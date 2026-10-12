@@ -83,6 +83,12 @@ study's exact actions. No overview publication creates jobs or expands scope.
 Existing pinned campaigns keep their old installed runtime; use a separate
 review-only installation or adopt the new release for a fresh campaign.
 
+Runtime 0.3.1 adds English / Simplified Chinese presentation. Choose **简体中文**
+or open `http://127.0.0.1:8765/?lang=zh-CN`. Project content can provide validated
+`translations` narrative fields; IDs, source bytes, numeric results, permissions
+and feedback kinds stay canonical. Missing content translations fall back to
+English. See the [localization schema](docs/workflow-overview.md#english--simplified-chinese-presentation-031).
+
 ## Durability and recovery
 
 `inbox.sqlite3` stores both the review data and runtime ledger. Results enter a
@@ -155,6 +161,10 @@ sibling repo it is then. execute the plan with a tracker by creating our own for
 procedural separation is enough for now.
 ```
 
+```text
+create a chinese version of the review inbox
+```
+
 ## Revision History
 
 | Revision | Timestamp | Change |
@@ -163,3 +173,4 @@ procedural separation is enough for now.
 | r2 | 2026-10-09 14:41 -0700 | Documented review access to migrated inboxes without a campaign contract; patch release 0.1.1 retains the frozen-execution identity requirement. |
 | r3 | 2026-10-09 14:50 -0700 | Added the explicitly accepted procedural confirmation contract, frozen checkout/verifier proxy, durable exposure ledger and aggregate-only release boundary. |
 | r4 | 2026-10-12 12:08 -0700 | Documented 0.3 newcomer-friendly workflow overview, project-neutral publication and safe evidence/feedback boundary without changing old campaign pins. |
+| r5 | 2026-10-12 12:56 -0700 | Added 0.3.1 Chinese presentation and display-only localization while preserving canonical numeric evidence and authority; preserved exact request. |

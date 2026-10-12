@@ -191,6 +191,9 @@ class Inbox:
             p["project_id"] = p["workflow"]["project_id"]
             with self.connect() as db:
                 self.validate_workflow_links(db, p)
+        if "translations" in p:
+            from .localization import validate_translations
+            validate_translations(p["translations"], p)
         return p, snapshots
 
     @staticmethod
@@ -415,7 +418,8 @@ class Inbox:
             for packet in data["packets"]:
                 for i, source in enumerate(packet["sources"]):
                     source["snapshot"] = self.evidence(packet["id"], i)
-        return TEMPLATE.read_text().replace("__INITIAL_DATA__", encode(data).replace("<", "\\u003c")).replace("__OFFLINE__", "true" if offline else "false")
+        translations = json.loads(TEMPLATE.with_name("zh-CN.json").read_text())
+        return TEMPLATE.read_text().replace("__INITIAL_DATA__", encode(data).replace("<", "\\u003c")).replace("__OFFLINE__", "true" if offline else "false").replace("__ZH_CN__", encode(translations).replace("<", "\\u003c"))
 
 
 def server(inbox, port=8765):
