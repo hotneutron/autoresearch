@@ -45,4 +45,12 @@ assert.equal(localized.id,overview.id);assert.equal(localized.workflow.efforts[0
 assert.equal(overview.workflow.efforts[0].motivation,'Size is controllable.');
 node('comment').value='请保留所有失败样本';node('comment').oninput();
 vm.runInContext("setLocale('en')",context);assert.equal(node('comment').value,'请保留所有失败样本');assert.ok(node('detail').innerHTML.includes('Start here · Faster photographs'));
-process.stdout.write('Workflow UI and Chinese localization rendering checks passed.\n');
+context.fixture.goal_steering={state:'goal_review_required',reason:'Review the parent goal',goal:{goal:'Predict <unseen> workloads'},accounting:{spent_seconds:10,reserved_seconds:0,max_seconds:20},triggers:['diagnostic_campaign_limit']};
+vm.runInContext("detailSignature='';render()",context);
+assert.ok(node('detail').innerHTML.includes('Goal-level steering'));
+assert.ok(node('detail').innerHTML.includes('Predict &lt;unseen&gt; workloads'));
+assert.ok(node('detail').innerHTML.includes('10 / 0 / 20'));
+vm.runInContext("setLocale('zh-CN')",context);
+assert.ok(node('detail').innerHTML.includes('目标级纠偏'));
+assert.ok(node('detail').innerHTML.includes('不能覆盖科学门槛'));
+process.stdout.write('Workflow UI, Chinese localization and goal-steering rendering checks passed.\n');

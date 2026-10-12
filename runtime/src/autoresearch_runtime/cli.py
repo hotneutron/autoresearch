@@ -31,6 +31,9 @@ def main():
     review.add_argument("--repo", type=Path, help="Released evidence root (default: store)")
     review.add_argument("--port", type=int, default=8765)
     review.add_argument("--output", type=Path)
+    goal = sub.add_parser("goal", help="Persistent goal steering above campaign execution")
+    goal.add_argument("operation", choices=("anchor", "proposal", "assess", "control", "checkpoint", "status"))
+    goal.add_argument("document", type=Path, nargs="?")
     steering = sub.add_parser("steer")
     steering.add_argument("record", type=Path)
     migration = sub.add_parser("migrate")
@@ -41,6 +44,15 @@ def main():
     try:
         if args.command == "migrate":
             result = migrate(args.source, args.store, args.project)
+        elif args.command == "goal":
+            from .goals import GoalLedger
+            ledger = GoalLedger(args.store)
+            if args.operation == "status":
+                result = ledger.snapshot()
+            else:
+                if args.document is None:
+                    raise ValueError("A goal record JSON document is required")
+                result = getattr(ledger, args.operation)(json.loads(args.document.read_text()))
         elif args.command == "review":
             # Prototype inboxes have no runtime contract. Review reads immutable
             # stored snapshots and does not dispatch experimental jobs.

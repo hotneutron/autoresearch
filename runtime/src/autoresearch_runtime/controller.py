@@ -2,6 +2,8 @@
 
 Contracts come from the project adapter. Agent submissions select declared units;
 they cannot supply eligibility, commands, verifier rules, or approval policy.
+Revision History: 2026-10-12 — enforce optional goal-bound new-campaign admission;
+admitted complete designs retain all existing execution/scientific/review gates.
 """
 from __future__ import annotations
 
@@ -54,6 +56,11 @@ class Controller:
         if self.config["runtime"] != runtime_identity():
             raise Conflict("Runtime changed; use the pinned runtime or migrate after job reconciliation")
         self.contract = self.config["contract"]
+        self.goals = None
+        if "goal_gate" in self.contract:
+            from .goals import GoalLedger, validate_gate
+            validate_gate(self.contract["goal_gate"])
+            self.goals = GoalLedger(self.contract["goal_gate"]["ledger"])
         atomic_json(self.directory / "contract.json", self.config)
 
     @staticmethod
@@ -63,6 +70,11 @@ class Controller:
         identifier(config["id"])
         if "project_id" in config:
             identifier(config["project_id"])
+        if "goal_gate" in config:
+            from .goals import validate_gate
+            validate_gate(config["goal_gate"])
+            if not config.get("project_id"):
+                raise ValueError("Goal-bound campaigns require explicit project identity")
         if not config.get("prompt_verbatim"):
             raise ValueError("Original instruction required")
         if not Path(config["project_root"]).is_dir():
@@ -286,6 +298,11 @@ class Controller:
                 if attempted >= self.contract["budget"]["max_units"] or spent + task["timeout_seconds"] > self.contract["budget"]["max_seconds"]:
                     reasons[row["id"]] = "Budget cannot cover another complete unit"
                     continue
+                if self.goals:
+                    goal_gate = self.goals.gate(self.contract, self.directory)
+                    if not goal_gate["allowed"]:
+                        reasons[row["id"]] = "Goal review required: " + goal_gate["reason"]
+                        continue
                 try:
                     verify_binding(task)
                     prerequisites = [verdict(r) for r in task.get("requires", [])]
@@ -296,6 +313,14 @@ class Controller:
                     reasons[row["id"]] = str(error)
                     continue
                 try:
+                    if self.goals:
+                        try:
+                            # Reserve once, after scientific/approval/source/lease
+                            # checks and before consuming confirmation or launching.
+                            self.goals.admit(self.contract, self.directory)
+                        except (OSError, ValueError, KeyError, TypeError) as error:
+                            reasons[row["id"]] = "Goal review required: " + str(error)
+                            continue
                     if task.get("confirmation"):
                         from .confirmation import begin
                         try:
@@ -371,4 +396,6 @@ class Controller:
             units = [dict(r) for r in db.execute("SELECT id,task_id,branch,state,result FROM units ORDER BY created")]
             pending = db.execute("SELECT COUNT(*) FROM outbox WHERE delivered=0").fetchone()[0]
         return {"campaign": self.contract["id"], "units": units, "pending_publications": pending,
+                **({"goal_gate": self.goals.gate(self.contract, self.directory),
+                    "goal_steering": self.goals.snapshot()} if self.goals else {}),
                 "inbox": self.inbox.snapshot()}

@@ -400,7 +400,22 @@ class Inbox:
                 packets.append(p)
             events = [{**dict(r), "body": json.loads(r["body"])} for r in db.execute("SELECT f.*,p.branch FROM feedback f JOIN packets p ON p.id=f.packet_id ORDER BY f.seq DESC LIMIT 200")]
             jobs = [dict(r) for r in db.execute("SELECT * FROM jobs ORDER BY started DESC LIMIT 100")]
-        return {"packets": packets, "feedback": events, "jobs": jobs, "generated": now()}
+        result = {"packets": packets, "feedback": events, "jobs": jobs, "generated": now()}
+        # Optional goal-level status is read-only; presentation never instantiates
+        # a Controller or grants a campaign permit. Existing stores remain valid.
+        contract_path = self.directory / "contract.json"
+        if contract_path.exists():
+            config = json.loads(contract_path.read_text())
+            gate = config.get("contract", {}).get("goal_gate")
+            if gate:
+                from .goals import GoalLedger
+                try:
+                    ledger = GoalLedger(gate["ledger"])
+                    result["goal_steering"] = ledger.snapshot()
+                    result["goal_gate"] = ledger.gate(config["contract"], self.directory)
+                except (OSError, ValueError, KeyError, TypeError) as error:
+                    result["goal_steering"] = {"state": "goal_review_required", "reason": str(error)}
+        return result
 
     def evidence(self, packet_id, index):
         with self.connect() as db:
