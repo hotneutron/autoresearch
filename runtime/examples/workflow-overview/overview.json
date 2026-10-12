@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "summary": "Illustrative example: smaller photographs could upload faster, but quality has not been established. No deployment is authorized.",
+  "prompt_verbatim": "Show a newcomer what we tried, why we tried it, what we learned and what should happen next.",
+  "sources": [{"label": "Illustrative released report (not actual research)", "path": "evidence.json"}],
+  "workflow": {
+    "kind": "overview",
+    "project_id": "image-upload-example",
+    "project_name": "Faster photograph uploads",
+    "goal": "Upload photographs faster without losing visible detail.",
+    "background": "Large image files take longer to send. This example explains how a research team could compare smaller image encodings before changing the product. Its numbers are illustrative, not measured evidence.",
+    "success_criteria": ["Smaller files shorten upload time.", "Independent image-quality checks must pass before any deployment."],
+    "status": "planned",
+    "current_question": "Can a different image encoding reduce file size without reducing quality?",
+    "next_checkpoint": "Collect a complete speed and quality comparison under a separately approved experiment contract.",
+    "updated_at": "2026-10-12T12:00:00+00:00",
+    "glossary": [
+      {"term": "codec", "meaning": "A method used to encode or compress an image."},
+      {"term": "speedup", "meaning": "Old transfer time divided by new transfer time; 1.2 would mean 20% more work per unit time, not proven here."}
+    ],
+    "efforts": [{
+      "id": "smaller-files",
+      "title": "Explore a more compact image encoding",
+      "status": "planned",
+      "question": "Would smaller files reduce transfer time?",
+      "motivation": "File size is a direct, controllable input to transfer time.",
+      "approach": "Compare two encoders on identical public photographs; check speed and image quality separately.",
+      "alternatives": [{"option": "Buy more network bandwidth", "reason": "It changes infrastructure and would not isolate the encoding effect."}],
+      "outcome": "No experiment has been run. The attached illustrative report only demonstrates the review format.",
+      "decision": "Do not deploy; prepare a complete comparison first.",
+      "rationale": "A smaller file is useful only if it preserves acceptable image quality.",
+      "uncertainty": "Quality of unseen photographs is untested, and the illustrative speedup is not a measurement.",
+      "next_step": "Freeze the image selection, quality verifier and complete-unit experiment budget.",
+      "evidence": [0]
+    }],
+    "feedback_dispositions": []
+  }
+}

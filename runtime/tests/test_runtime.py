@@ -58,6 +58,14 @@ class RuntimeTests(unittest.TestCase):
         return c.inbox.submit({"id": uuid.uuid4().hex, "packet_id": p["id"], "packet_hash": p["hash"],
                                "kind": kind, "action_id": action, "comment": "Preserved feedback"})
 
+    def test_project_id_is_carried_into_study_packets(self):
+        self.config['project_id'] = 'portable-project'
+        c = self.controller(); c.submit('one'); c.run()
+        p = c.inbox.snapshot()['packets'][0]
+        self.assertEqual(p['project_id'], 'portable-project')
+        self.assertEqual(p['contract_id'], 'qualification')
+        self.assertEqual(c.status()['units'][0]['state'], 'completed')
+
     def test_A03_A08_completed_process_can_fail_scientific_gate(self):
         self.config["tasks"]["one"]["argv"][-1] = "no"
         c = self.controller()

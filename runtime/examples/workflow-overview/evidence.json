@@ -1,0 +1,6 @@
+{
+  "kind": "illustrative_example_not_experiment",
+  "speedup": 1.2,
+  "quality_qualified": false,
+  "finding": "Illustrative smaller files could reduce upload time; no quality or deployment claim is established."
+}

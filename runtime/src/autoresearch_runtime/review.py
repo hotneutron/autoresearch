@@ -179,7 +179,43 @@ class Inbox:
                 actual = pointer(json.loads(raw), metric["selector"])
                 if type(actual) is not type(metric["value"]) or actual != metric["value"]:
                     raise Conflict("Metric value does not match its source selector")
+        if "project_id" in p:
+            identifier(p["project_id"])
+        if "workflow" in p:
+            from .workflow import validate_workflow
+            if p["schema_version"] != 2 or p["actions"] or p["review_mode"] == "decision":
+                raise ValueError("Workflow overview is advisory-only and has no executable actions")
+            validate_workflow(p["workflow"], len(sources))
+            if p.get("project_id", p["workflow"]["project_id"]) != p["workflow"]["project_id"]:
+                raise ValueError("Workflow project identity differs")
+            p["project_id"] = p["workflow"]["project_id"]
+            with self.connect() as db:
+                self.validate_workflow_links(db, p)
         return p, snapshots
+
+    @staticmethod
+    def validate_workflow_links(db, packet):
+        """A prose claim is not a permit; links must bind exact same-project records."""
+        workflow = packet.get("workflow")
+        if not workflow:
+            return
+        project = workflow["project_id"]
+        allowed_branches = {packet["branch"]}
+        for effort in workflow["efforts"]:
+            target = effort.get("target")
+            if not target:
+                continue
+            row = db.execute("SELECT * FROM packets WHERE id=?", (target["packet_id"],)).fetchone()
+            if not row or row["hash"] != target["packet_hash"]:
+                raise Conflict("Workflow target packet is missing or changed")
+            body = json.loads(row["body"])
+            if body.get("project_id") != project or "workflow" in body:
+                raise Conflict("Workflow links must target a study in the same declared project")
+            allowed_branches.add(row["branch"])
+        for disposition in workflow["feedback_dispositions"]:
+            row = db.execute("SELECT f.status,p.branch,p.body FROM feedback f JOIN packets p ON p.id=f.packet_id WHERE f.id=?", (disposition["feedback_id"],)).fetchone()
+            if not row or row["status"] != "applied" or row["branch"] not in allowed_branches or json.loads(row["body"]).get("project_id") != project:
+                raise Conflict("Disposition must refer to applied feedback for this overview or a linked same-project study")
 
     def publish(self, supplied):
         p, snapshots = self.validate(supplied)
@@ -191,8 +227,16 @@ class Inbox:
                 if existing["hash"] != sha:
                     raise Conflict("Packet ids are immutable; publish a new id and revision")
                 return {"id": p["id"], "hash": sha, "published": existing["published"], "duplicate": True}
-            latest = db.execute("SELECT MAX(revision) FROM packets WHERE branch=?", (p["branch"],)).fetchone()[0]
-            if p["revision"] != (latest or 0) + 1:
+            latest_row = db.execute("SELECT * FROM packets WHERE branch=? ORDER BY revision DESC LIMIT 1", (p["branch"],)).fetchone()
+            if latest_row:
+                prior = json.loads(latest_row["body"])
+                if prior.get("project_id") != p.get("project_id"):
+                    raise Conflict("A branch cannot change its declared project identity")
+                if ("workflow" in prior) != ("workflow" in p):
+                    raise Conflict("Overview and execution reports must use separate stable branches")
+            self.validate_workflow_links(db, p)
+            latest = latest_row["revision"] if latest_row else 0
+            if p["revision"] != latest + 1:
                 raise Conflict("Publish consecutive revisions within each branch")
             for key, snapshot in snapshots:
                 db.execute("INSERT OR IGNORE INTO evidence VALUES (?,?)", (key, snapshot))
@@ -231,6 +275,8 @@ class Inbox:
             if row["hash"] != value["packet_hash"] or self.latest(db, row["branch"])["id"] != row["id"]:
                 raise Conflict("This report has changed. Refresh and review the current revision.")
             p = json.loads(row["body"])
+            if "workflow" in p and value["kind"] not in {"ack", "comment"}:
+                raise ValueError("Overview feedback is advisory; open the current study report to approve, pause or resume")
             if value["kind"] in {"approve", "reject"}:
                 action = next((a for a in p["actions"] if a["id"] == value["action_id"]), None)
                 if not action:
@@ -340,6 +386,14 @@ class Inbox:
                 p["acknowledged"] = any(json.loads(r[0])["kind"] == "ack" for r in db.execute("SELECT body FROM feedback WHERE packet_id=? AND status!='stale'", (row["id"],)))
                 old = db.execute("SELECT body FROM packets WHERE branch=? AND revision<? ORDER BY revision DESC LIMIT 1", (row["branch"], row["revision"])).fetchone()
                 p["previous"] = json.loads(old[0]) if old else None
+                if "workflow" in p:
+                    for effort in p["workflow"]["efforts"]:
+                        target = effort.get("target")
+                        if target:
+                            target_row = db.execute("SELECT branch FROM packets WHERE id=?", (target["packet_id"],)).fetchone()
+                            latest_target = self.latest(db, target_row["branch"]) if target_row else None
+                            target["is_current"] = bool(latest_target and latest_target["id"] == target["packet_id"] and latest_target["hash"] == target["packet_hash"])
+                            target["current_packet_id"] = latest_target["id"] if latest_target else None
                 packets.append(p)
             events = [{**dict(r), "body": json.loads(r["body"])} for r in db.execute("SELECT f.*,p.branch FROM feedback f JOIN packets p ON p.id=f.packet_id ORDER BY f.seq DESC LIMIT 200")]
             jobs = [dict(r) for r in db.execute("SELECT * FROM jobs ORDER BY started DESC LIMIT 100")]
@@ -433,6 +487,8 @@ def main():
     sub = parser.add_subparsers(dest="command", required=True)
     publish = sub.add_parser("publish", help="Publish an immutable report and return immediately")
     publish.add_argument("packet", type=Path)
+    overview = sub.add_parser("overview", help="Publish an advisory-only project workflow overview")
+    overview.add_argument("document", type=Path)
     sub.add_parser("status")
     checkpoint = sub.add_parser("checkpoint", help="Consume feedback without waiting for a reviewer")
     checkpoint.add_argument("branch")
@@ -454,6 +510,9 @@ def main():
         rc = 0
         if args.command == "publish":
             result = inbox.publish(json.loads(args.packet.read_text()))
+        elif args.command == "overview":
+            from .workflow import publish_overview
+            result = publish_overview(inbox, json.loads(args.document.read_text()))
         elif args.command == "status":
             result = inbox.snapshot()
         elif args.command == "checkpoint":

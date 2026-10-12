@@ -61,6 +61,8 @@ class Controller:
         if config.get("schema_version") != 1:
             raise ValueError("Unsupported campaign schema")
         identifier(config["id"])
+        if "project_id" in config:
+            identifier(config["project_id"])
         if not config.get("prompt_verbatim"):
             raise ValueError("Original instruction required")
         if not Path(config["project_root"]).is_dir():
@@ -187,6 +189,7 @@ class Controller:
         passed = info.get("scientific_pass", False)
         review = "decision" if pending and not task["approved"] else "fyi"
         return {"schema_version": 2, "id": packet_id, "branch": branch, "revision": revision,
+                **({"project_id": self.contract["project_id"]} if "project_id" in self.contract else {}),
                 "contract_id": self.contract["id"], "title": task.get("title", task["branch"]),
                 "question": task.get("question", "Does this complete unit satisfy its fixed verifier?"),
                 "takeaway": info.get("reason", "Scientific checks pass" if passed else "Scientific checks fail"),

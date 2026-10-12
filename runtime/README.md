@@ -60,6 +60,29 @@ reported values against released JSON snapshots. Units/support/baselines and
 comparison keys are explicit. Offline HTML embeds evidence and is read-only.
 The inbox is a local pull interface, not an email/Slack notification service.
 
+## Project workflow overview · Start here
+
+Runtime 0.3 adds a reusable, newcomer-friendly workflow overview alongside study
+outcomes. It explains the project goal/background, success criteria and glossary,
+then each effort's question, why it was tried, alternatives, result, decision
+rationale, uncertainty and next step. Released evidence stays one click away.
+This is a public decision record, not private internal reasoning.
+
+```bash
+autoresearch --store /durable/project-review review overview overview.json --repo /project
+autoresearch --store /durable/project-review review serve --port 8765
+```
+
+See [the document/steering guide](docs/workflow-overview.md) and
+[non-H3 illustrative example](examples/workflow-overview/overview.json).
+The project agent/adapter publishes consecutive overview revisions at safe
+checkpoints; it supplies the accurate rationale instead of the runtime inventing
+one. Use one stable project review store to retain history across campaigns.
+Overview feedback is advisory; approve/pause/resume through the linked current
+study's exact actions. No overview publication creates jobs or expands scope.
+Existing pinned campaigns keep their old installed runtime; use a separate
+review-only installation or adopt the new release for a fresh campaign.
+
 ## Durability and recovery
 
 `inbox.sqlite3` stores both the review data and runtime ledger. Results enter a
@@ -139,3 +162,4 @@ procedural separation is enough for now.
 | r1 | 2026-10-09 14:29 -0700 | Documented installed runtime, inbox, contract/agent interface, recovery and explicit unsupported execution boundaries. |
 | r2 | 2026-10-09 14:41 -0700 | Documented review access to migrated inboxes without a campaign contract; patch release 0.1.1 retains the frozen-execution identity requirement. |
 | r3 | 2026-10-09 14:50 -0700 | Added the explicitly accepted procedural confirmation contract, frozen checkout/verifier proxy, durable exposure ledger and aggregate-only release boundary. |
+| r4 | 2026-10-12 12:08 -0700 | Documented 0.3 newcomer-friendly workflow overview, project-neutral publication and safe evidence/feedback boundary without changing old campaign pins. |

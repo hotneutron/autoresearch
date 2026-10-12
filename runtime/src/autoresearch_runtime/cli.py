@@ -26,7 +26,9 @@ def main():
         run.add_argument("--idle-timeout", type=float, default=0)
         run.add_argument("--port", type=int, default=8765)
     review = sub.add_parser("review")
-    review.add_argument("operation", choices=("serve", "status", "export"))
+    review.add_argument("operation", choices=("serve", "status", "export", "publish", "overview"))
+    review.add_argument("document", type=Path, nargs="?", help="Packet JSON for publish, workflow JSON for overview")
+    review.add_argument("--repo", type=Path, help="Released evidence root (default: store)")
     review.add_argument("--port", type=int, default=8765)
     review.add_argument("--output", type=Path)
     steering = sub.add_parser("steer")
@@ -42,8 +44,17 @@ def main():
         elif args.command == "review":
             # Prototype inboxes have no runtime contract. Review reads immutable
             # stored snapshots and does not dispatch experimental jobs.
-            inbox = Inbox(args.store, args.store)
-            if args.operation == "status":
+            inbox = Inbox(args.store, args.repo or args.store)
+            if args.operation in {"publish", "overview"}:
+                if args.document is None:
+                    raise ValueError("A JSON document is required")
+                document = json.loads(args.document.read_text())
+                if args.operation == "overview":
+                    from .workflow import publish_overview
+                    result = publish_overview(inbox, document)
+                else:
+                    result = inbox.publish(document)
+            elif args.operation == "status":
                 result = inbox.snapshot()
             elif args.operation == "export":
                 if args.output is None:
