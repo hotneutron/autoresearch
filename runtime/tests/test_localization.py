@@ -38,7 +38,7 @@ class LocalizationTests(unittest.TestCase):
         with self.assertRaises(ValueError):self.inbox.publish(p)
 
     def test_alignment_locale_and_text_shape_rejected(self):
-        for change in ({'workflow':{'efforts':[]}},{'changed':['extra','items']},{'title':3}):
+        for change in ({'workflow':{'efforts':[]}},{'changed':['extra','items','wrong-length']},{'title':3}):
             p=copy.deepcopy(self.packet);p['translations']['zh-CN']=change
             with self.assertRaises(ValueError):self.inbox.publish(p)
         p=copy.deepcopy(self.packet);p['translations']={'zh-TW':{'title':'not supported'}}

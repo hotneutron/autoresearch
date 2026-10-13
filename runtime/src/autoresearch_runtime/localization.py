@@ -26,7 +26,7 @@ def validate_translations(translations, packet):
     if not isinstance(translations, dict) or translations.keys() - LOCALES:
         raise ValueError("Unsupported translation locale")
     for locale, translated in translations.items():
-        fields(translated, PACKET_TEXT | {"changed", "limitations", "workflow", "sources", "metrics", "actions"})
+        fields(translated, PACKET_TEXT | {"changed", "limitations", "workflow", "sources", "metrics", "actions", "narrative"})
         texts({k: v for k, v in translated.items() if k in PACKET_TEXT})
         for key in ("changed", "limitations"):
             if key in translated:
@@ -38,6 +38,18 @@ def validate_translations(translations, packet):
                 aligned(translated[key], packet[key])
                 for value in translated[key]:
                     fields(value, allowed); texts(value)
+        if "narrative" in translated:
+            if "narrative" not in packet:
+                raise ValueError("Translation cannot introduce evidence interpretation")
+            from .narrative import TEXT_FIELDS
+            fields(translated["narrative"], set(TEXT_FIELDS))
+            for section, items in translated["narrative"].items():
+                aligned(items, packet["narrative"][section])
+                for item, canonical in zip(items, packet["narrative"][section]):
+                    fields(item, TEXT_FIELDS[section] | {"id"})
+                    if item.get("id") != canonical["id"]:
+                        raise ValueError("Translated narrative identity differs")
+                    texts({k:v for k,v in item.items() if k != "id"})
         if "workflow" in translated:
             if "workflow" not in packet:
                 raise ValueError("Translation cannot introduce a workflow")

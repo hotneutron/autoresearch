@@ -259,6 +259,29 @@ class RuntimeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             c.steer(record)
 
+    def test_contextual_narrative_from_fixed_result_and_bad_pointer_fails_report(self):
+        from test_narrative import narrative
+        n=narrative()
+        self.config['tasks']['one']['review_narrative']={'pending':n}
+        self.config['tasks']['one']['review_changed']={'pending':['Prepared a complete size/quality comparison.']}
+        self.config['tasks']['one']['report_narrative_pointer']='/narrative'
+        self.script.write_text(SCRIPT+"\n(out/'result.json').write_text(json.dumps({'schema_version':1,'allowed':True,'value':7,'narrative':"+repr(n)+"}))\n")
+        for task in self.config['tasks'].values():task['closure']=bind_files([sys.executable,self.script])
+        c=self.controller();c.submit('one')
+        self.assertEqual(c.inbox.snapshot()['packets'][0]['narrative'],n)
+        c.run();self.assertEqual(c.inbox.snapshot()['packets'][0]['narrative'],n)
+        self.assertTrue(json.loads(c.status()['units'][0]['result'])['scientific_pass'])
+
+    def test_missing_completed_narrative_is_not_fabricated(self):
+        self.config['tasks']['one']['report_narrative_pointer']='/missing'
+        c=self.controller();c.submit('one');c.run()
+        result=json.loads(c.status()['units'][0]['result'])
+        self.assertTrue(result['scientific_pass'])
+        self.assertEqual(result,json.loads((self.store/'trials/one/receipt.json').read_text()))
+        p=c.inbox.snapshot()['packets'][0]
+        self.assertEqual(p['evidence_status'],'invalid');self.assertIn('Report schema failure',p['takeaway'])
+        self.assertNotIn('narrative',p)
+
     def test_A16_unqualified_confirmation_backend_fails_closed(self):
         self.config["tasks"]["one"]["confirmation"] = True
         with self.assertRaisesRegex(ValueError, "access boundary"):

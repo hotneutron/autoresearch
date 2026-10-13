@@ -19,6 +19,16 @@ Open http://127.0.0.1:8765 and select **Start here**. The example is an image-up
 
 Use a stable **project review store** across campaigns if you want a persistent decision trail. This command does not automatically aggregate arbitrary campaign databases or copy private files. Existing stores keep their own execution identity; do not install new code underneath an active pinned runtime. Use a separate review-only environment/store, or adopt 0.3.0 when preparing a new frozen campaign.
 
+## Contextual changes and evidence explanations · 0.4.1
+
+See [the contextual-review schema and authoring guide](contextual-review.md).
+Overview documents now accept optional authored `changed`, `limitations` and
+structured source-backed `narrative`. Defaults reuse supplied effort outcomes,
+rationales and uncertainties—not generic publication/private-reasoning boilerplate.
+The inbox explains comparison, support, finding, interpretation, goal relevance
+and caveats before optionally expanded raw metrics. Ordinary study packets use
+the same generic structure and strictly display-only Chinese overlays.
+
 ## What a newcomer sees
 
 1. **Start here:** human-readable project name, goal, short background and plain-language success criteria.
@@ -133,3 +143,4 @@ make the inbox comprehensible even for a newcomer.
 |---|---|---|
 | r1 | 2026-10-12 12:08 -0700 | Documented reusable overview format, newcomer context, evidence-linked effort rationale, explicit feedback disposition and unchanged execution boundaries, with a non-H3 example. |
 | r2 | 2026-10-12 12:56 -0700 | Documented Simplified Chinese selector, strict display-only translation schema and canonical evidence/feedback semantics. |
+| r3 | 2026-10-12 17:20 -0700 | Added0.4.1 contextual change/limitation and narrative-first evidence authoring/schema reference for generic overview and study packets; exact requests preserved in contextual-review.md. |

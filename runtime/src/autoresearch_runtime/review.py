@@ -179,6 +179,11 @@ class Inbox:
                 actual = pointer(json.loads(raw), metric["selector"])
                 if type(actual) is not type(metric["value"]) or actual != metric["value"]:
                     raise Conflict("Metric value does not match its source selector")
+        if "narrative" in p:
+            if p["schema_version"] != 2:
+                raise ValueError("Contextual narrative requires schema2 review packets")
+            from .narrative import validate
+            validate(p["narrative"], len(sources))
         if "project_id" in p:
             identifier(p["project_id"])
         if "workflow" in p:

@@ -69,6 +69,18 @@ fixed contract. Include imported code and environment dependencies in the closur
 The worker verifies declared files before and after execution. Source hashing is
 not an operating-system sandbox against an adversarial same-user process.
 
+## Contextual evidence review · 0.4.1
+
+The generic inbox now supports source-backed explanations of before/after/meaning,
+unanswered questions and detailed evidence insights. It renders comparison,
+support, finding, interpretation, goal relevance and caveat before a collapsed
+technical metric table. Project adapters supply the science; the framework
+validates structure, IDs, source references and display-only locale overlays.
+The same structure works for study packets, overview documents and fixed-result
+Controller publication. See [contextual review](docs/contextual-review.md).
+Existing packets remain readable; missing explanation is disclosed, not invented.
+Use a separate review-only installation instead of changing scientific runtime pins.
+
 ## Review behavior
 
 Packets publish automatically when units are prepared/completed. FYI and advice
@@ -198,3 +210,4 @@ create a chinese version of the review inbox
 | r4 | 2026-10-12 12:08 -0700 | Documented 0.3 newcomer-friendly workflow overview, project-neutral publication and safe evidence/feedback boundary without changing old campaign pins. |
 | r5 | 2026-10-12 12:56 -0700 | Added 0.3.1 Chinese presentation and display-only localization while preserving canonical numeric evidence and authority; preserved exact request. |
 | r6 | 2026-10-12 16:35 -0700 | Documented 0.4.0 goal-linked proposal/assessment, enforced complete-campaign admission and failure-inclusive aggregate settlement; latest exact implementation request is preserved in docs/goal-steering.md and its plan. Old pins and scientific gates unchanged. |
+| r7 | 2026-10-12 17:20 -0700 | Documented0.4.1 generic contextual narrative and detailed evidence-first review with optional raw metrics; request/history in contextual-review.md, scientific pins unchanged. |

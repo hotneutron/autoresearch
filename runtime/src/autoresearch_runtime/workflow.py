@@ -101,7 +101,7 @@ def validate_workflow(value, source_count):
 
 def overview_packet(document):
     """Build an advisory-only packet. Caller supplies meaning and released sources."""
-    object_fields(document, {"schema_version", "revision", "summary", "workflow", "sources", "prompt_verbatim"}, {"metrics", "translations"})
+    object_fields(document, {"schema_version", "revision", "summary", "workflow", "sources", "prompt_verbatim"}, {"metrics", "translations", "changed", "limitations", "narrative"})
     if type(document["schema_version"]) is not int or document["schema_version"] != 1:
         raise ValueError("Overview document schema_version must be 1")
     workflow = document["workflow"]
@@ -113,13 +113,20 @@ def overview_packet(document):
     revision = document["revision"]
     if type(revision) is not int or revision < 1:
         raise ValueError("Overview revision must be a positive integer")
+    from .narrative import from_workflow, validate
+    from .review import strings
+    narrative = document.get("narrative") or from_workflow(workflow, document["summary"])
+    validate(narrative, len(document["sources"]))
+    changed = document.get("changed", [document["summary"], "The current question is: " + workflow["current_question"]])
+    limitations = document.get("limitations", ["Next evidence needed: " + workflow["next_checkpoint"],
+        "This overview explains the reported findings; it does not itself measure whether the project has met: " + workflow["success_criteria"][0]])
+    strings(changed); strings(limitations)
     return dict(schema_version=2, id=identifier(f"{branch}-r{revision}"), branch=branch,
                 contract_id=identifier(workflow["project_id"]), revision=revision,
                 title=f"{workflow['project_name']} · Start here", question="What are we trying to learn, why, and what happens next?",
                 takeaway=document["summary"], why_it_matters="Follow the goal, evidence and public decision rationale before inspecting technical reports.",
-                decision="Workflow status: " + workflow["status"], changed=["Updated the released workflow overview and effort/decision trail."],
-                limitations=["This is a public decision summary, not private internal reasoning or automatic scientific qualification.",
-                             "Overview comments are advisory. Study approvals and pauses belong to each exact study report."],
+                decision="Workflow status: " + workflow["status"], changed=changed,
+                limitations=limitations, narrative=narrative,
                 evidence_status="diagnostic", review_mode="advice", review_question="Suggest a direction here, or open a linked current study to steer its declared actions.",
                 recommendation="Read Start here, then why each effort was tried, its evidence, uncertainty and next step.",
                 review_by="Next safe research checkpoint; no deadline grants approval", historical=False,

@@ -21,7 +21,7 @@ import time
 import uuid
 
 from .protocol import atomic_json, expand, pointer, runtime_identity, sha256, verdict, verify_binding
-from .review import Inbox, Conflict, encode, identifier, now
+from .review import Inbox, Conflict, encode, identifier, now, string
 from .worker import alive
 
 STEERING = {"CONTINUE", "DIAGNOSE", "PIVOT", "ADVANCE", "DEFER", "STOP", "ASK_HUMAN"}
@@ -92,6 +92,22 @@ class Controller:
             if not isinstance(task["argv"], list) or not all(isinstance(x, str) for x in task["argv"]):
                 raise ValueError("argv must be a string list")
             verify_binding(task)
+            if "review_narrative" in task:
+                if not isinstance(task["review_narrative"], dict) or task["review_narrative"].keys() - {"pending", "completed"}:
+                    raise ValueError("Review narrative phases must be pending/completed")
+                from .narrative import validate
+                for value in task["review_narrative"].values():
+                    validate(value, 1)
+            if "review_changed" in task:
+                from .review import strings
+                if not isinstance(task["review_changed"], dict) or task["review_changed"].keys() - {"pending", "completed"}:
+                    raise ValueError("Review change phases must be pending/completed")
+                for value in task["review_changed"].values():
+                    strings(value)
+            if "report_narrative_pointer" in task:
+                string(task["report_narrative_pointer"])
+                if not task["report_narrative_pointer"].startswith("/"):
+                    raise ValueError("Use a JSON pointer for completed narrative")
             if not task["verdict"]["checks"]:
                 raise ValueError("Fixed verifier checks required")
             if task.get("backend", "local") != "local":
@@ -200,15 +216,26 @@ class Controller:
         atomic_json(evidence, released)
         passed = info.get("scientific_pass", False)
         review = "decision" if pending and not task["approved"] else "fyi"
+        phase = "pending" if pending else "completed"
+        narrative = task.get("review_narrative", {}).get(phase)
+        if not pending and task.get("report_narrative_pointer") and info.get("execution_status") == "completed":
+            narrative = pointer(json.loads(Path(task["verdict"]["path"]).read_text()), task["report_narrative_pointer"])
+        if narrative is not None:
+            from .narrative import validate
+            validate(narrative, 1)
+        changed = task.get("review_changed", {}).get(phase, [
+            (f"Prepared '{task.get('title', task['branch'])}' to answer: " + task.get('question', 'the declared study question')) if pending else
+            (f"'{task.get('title', task['branch'])}' finished; " + ("the declared result checks passed." if passed else "the declared result checks did not all pass."))])
         return {"schema_version": 2, "id": packet_id, "branch": branch, "revision": revision,
                 **({"project_id": self.contract["project_id"]} if "project_id" in self.contract else {}),
                 "contract_id": self.contract["id"], "title": task.get("title", task["branch"]),
                 "question": task.get("question", "Does this complete unit satisfy its fixed verifier?"),
                 "takeaway": info.get("reason", "Scientific checks pass" if passed else "Scientific checks fail"),
                 "why_it_matters": task.get("why_it_matters", "Only verified evidence can support dependent research actions."),
-                "changed": ["Unit prepared under a frozen contract" if pending else "Complete unit execution and verification recorded"],
-                "limitations": task.get("limitations", ["Execution success alone is not scientific qualification."]),
-                "evidence_status": "diagnostic" if pending else ("valid" if passed else "invalid"),
+                "changed": changed,
+                "limitations": task.get("limitations", ["This report only covers the declared study checks; it does not yet answer the wider project question or test new, unseen cases."]),
+                **({"narrative": narrative} if narrative is not None else {}),
+                "evidence_status": "diagnostic" if pending else info.get("evidence_status", "valid" if passed else "invalid"),
                 "decision": "Await scoped decision" if review == "decision" else ("Ready" if pending and passed else "Recorded; no automatic promotion"),
                 "review_mode": review, "review_question": "Review at your pace; only named unapproved actions wait.",
                 "recommendation": task.get("recommendation", "Inspect the fixed checks and the recorded evidence."),
@@ -243,9 +270,15 @@ class Controller:
                 try:
                     packet = self.packet(row["id"], task, result)
                 except (ValueError, KeyError, OSError, TypeError) as error:
-                    result.update(scientific_pass=False, evidence_status="invalid", reason=f"Report schema failure: {error}")
+                    # A malformed explanation is a publication failure, not a
+                    # reason to rewrite the pinned scientific execution receipt.
+                    report_info = dict(result, evidence_status="invalid", reason=f"Report schema failure: {error}")
                     task.pop("report_metrics", None)
-                    packet = self.packet(row["id"], task, result)
+                    task.pop("report_narrative_pointer", None)
+                    task.pop("review_narrative", None)
+                    packet = self.packet(row["id"], task, report_info)
+                    with self.inbox.connect(write=True) as db:
+                        self.event(db, "report_failed", {"unit": row["id"], "reason": report_info["reason"]})
                 with self.inbox.connect(write=True) as db:
                     db.execute("UPDATE units SET state=?,result=? WHERE id=?",
                                (result["execution_status"], encode(result), row["id"]))
