@@ -53,6 +53,12 @@ The runtime validates concise public candidate rationale, evidence, scope and
 budgets. The project agent supplies the ideas and scientific judgment; neither the
 CLI nor inbox exposes private chain-of-thought or runs an LLM.
 
+Runtime0.5.2 treats a first no-viable slate as`rebrainstorm_required`, not terminal.
+`goal rebrainstorm` must cite an actual authority/infrastructure/evidence/objective/
+budget/external-coordination change. It either selects a newly viable bound
+candidate or records explicit unblock conditions in`awaiting_context_change`,
+preventing infinite unchanged brainstorm loops.
+
 ## Contract and agent interface
 
 A trusted project adapter creates `campaign.json`, with schema version 1, an ID,
@@ -238,6 +244,14 @@ also, provide effort index for "What remains unanswered, and why" as well.
 then execute the planned action.
 ```
 
+```text
+if no_viable_candidate, then the outer loop should re-brainstorm, right?
+```
+
+```text
+fix the issue then continue.
+```
+
 ## Revision History
 
 | Revision | Timestamp | Change |
@@ -252,3 +266,4 @@ then execute the planned action.
 | r8 | 2026-10-12 17:55 -0700 | Documented0.4.2 local rendered Markdown/raw source modal, safe inert HTML/links/images and offline/locale verification; exact request in rendered-sources.md, scientific pins unchanged. |
 | r9 | 2026-10-13 00:00 -0700 | Documented0.5.0 mandatory terminal-checkpoint reorientation, selected-candidate proposal binding, explicit no-viable state and public bilingual candidate display; preserved both exact requests. |
 | r10 | 2026-10-13 00:00 -0700 | Documented0.5.1 validated narrative-to-effort references and clickable E-index rendering in both overview context sections; preserved exact request and legacy compatibility. |
+| r11 | 2026-10-13 00:00 -0700 | Documented0.5.2 context-changing rebrainstorm after no-viable slates, selected-candidate continuation and explicit awaiting-context unblock conditions. |

@@ -4,6 +4,7 @@ The project agent supplies scientific meaning. This ledger enforces bindings,
 scope, prospective review checkpoints and accounting, not scientific relevance.
 Revision History: 2026-10-12 — initial goal/proposal/assessment/admission ledger.
 2026-10-13 — require outer-loop reorientation after a terminal campaign checkpoint.
+2026-10-13 — require context-changing rebrainstorm after a no-viable inventory.
 """
 from __future__ import annotations
 
@@ -163,7 +164,7 @@ class GoalLedger:
             "SELECT seq,id,hash,body FROM records WHERE kind='checkpoint' ORDER BY seq DESC LIMIT 1"
         ).fetchone()
         reorientation = db.execute(
-            "SELECT seq,id,hash,body FROM records WHERE kind='reorientation' ORDER BY seq DESC LIMIT 1"
+            "SELECT seq,kind,id,hash,body FROM records WHERE kind IN ('reorientation','rebrainstorm') ORDER BY seq DESC LIMIT 1"
         ).fetchone()
         goal = db.execute(
             "SELECT seq,id FROM records WHERE kind='goal' ORDER BY seq DESC LIMIT 1"
@@ -229,7 +230,7 @@ class GoalLedger:
         admissions = [dict(r) for r in db.execute("SELECT * FROM admissions ORDER BY created,campaign")]
         rows = [dict(r) for r in db.execute("SELECT seq,kind,id,hash FROM records ORDER BY seq")]
         # Assessment/proposal authoring does not itself change research context.
-        events = [r for r in rows if r["kind"] in {"goal", "control", "checkpoint", "reorientation"}]
+        events = [r for r in rows if r["kind"] in {"goal", "control", "checkpoint", "reorientation", "rebrainstorm"}]
         spent = goal["budget"]["imported_seconds"] + sum(a["charged"] for a in admissions)
         reserved = sum(a["reserved"] for a in admissions if a["state"] == "active")
         checkpoints = []
@@ -267,10 +268,13 @@ class GoalLedger:
             triggers.append("outer_loop_reorientation_required")
         elif path["reorientation"]:
             record = path["reorientation"]["body"]
-            triggers.append(
-                ("reorientation:" if record["selected_candidate"] is not None else "no_viable_candidate:")
-                + record["id"]
-            )
+            if record["selected_candidate"] is not None:
+                prefix = "reorientation:"
+            elif path["reorientation"]["kind"] == "reorientation":
+                prefix = "rebrainstorm_required:"
+            else:
+                prefix = "awaiting_context_change:"
+            triggers.append(prefix + record["id"])
         result = {"goal_hash": goal_row["hash"], "goal": goal, "events": events,
                   "accounting": {"spent_seconds": spent, "reserved_seconds": reserved,
                     "max_seconds": goal["budget"]["max_seconds"],
@@ -359,6 +363,75 @@ class GoalLedger:
                 if sum(candidate["budget"].values()) > context["accounting"]["remaining_seconds"]:
                     raise Conflict("Viable candidate complete route exceeds aggregate remainder")
             return self.put(db, "reorientation", record)
+
+    def rebrainstorm(self, record):
+        """Re-open candidate generation only after an explicit context change.
+
+        This prevents an immediate loop over the same rejected slate. A selected
+        candidate binds the next proposal exactly like a first reorientation. If
+        none is viable, explicit unblock conditions become durable state.
+        """
+        base(record, {"goal_hash", "context_hash", "parent_id", "parent_hash", "round",
+                      "unresolved_claim", "novelty_basis", "candidates",
+                      "selected_candidate", "no_viable_reason", "awaiting_context_change",
+                      "next_checkpoint"})
+        for key in ("goal_hash", "context_hash", "parent_hash"):
+            hash_text(record[key])
+        identifier(record["parent_id"])
+        if type(record["round"]) is not int or record["round"] < 1:
+            raise ValueError("Rebrainstorm round must be positive")
+        string(record["unresolved_claim"], 2000); string(record["next_checkpoint"], 2000)
+        novelty = record["novelty_basis"]
+        if not isinstance(novelty, list) or not 1 <= len(novelty) <= 10:
+            raise ValueError("Rebrainstorm requires an explicit context change")
+        for item in novelty:
+            fields(item, {"kind", "description", "evidence"})
+            if item["kind"] not in {"new_evidence", "authority_change", "infrastructure_change",
+                                    "objective_change", "budget_change", "external_coordination"}:
+                raise ValueError("Unknown rebrainstorm context-change kind")
+            string(item["description"], 2000); evidence(item["evidence"])
+        if not isinstance(record["candidates"], list) or not 1 <= len(record["candidates"]) <= 10:
+            raise ValueError("Rebrainstorm requires 1–10 explicit candidates")
+        seen=set();viable={}
+        for candidate in record["candidates"]:
+            fields(candidate, {"id", "proposal_id", "parent_claim", "scope", "kind",
+                               "decision", "endpoint_relevance", "novelty", "status",
+                               "reason", "budget", "evidence"})
+            identifier(candidate["id"]);identifier(candidate["proposal_id"]);identifier(candidate["parent_claim"])
+            if candidate["id"] in seen:raise ValueError("Duplicate rebrainstorm candidate")
+            seen.add(candidate["id"])
+            if candidate["kind"] not in {"diagnostic", "modeling", "evidence"}:raise ValueError("Unknown candidate proposal kind")
+            if candidate["status"] not in CANDIDATE_STATES:raise ValueError("Unknown rebrainstorm candidate status")
+            for key in ("scope", "decision", "endpoint_relevance", "novelty", "reason"):string(candidate[key],2000)
+            fields(candidate["budget"], {"campaign_seconds", "downstream_seconds"});number(candidate["budget"]["campaign_seconds"],positive=True);number(candidate["budget"]["downstream_seconds"]);evidence(candidate["evidence"])
+            if candidate["status"]=="viable":viable[candidate["id"]]=candidate
+        selected=record["selected_candidate"]
+        if viable:
+            if selected not in viable:raise ValueError("Select exactly one viable rebrainstorm candidate")
+            if record["no_viable_reason"] is not None or record["awaiting_context_change"]:
+                raise ValueError("Selected candidate cannot await another context change")
+        else:
+            if selected is not None:raise ValueError("Cannot select a rejected or blocked candidate")
+            string(record["no_viable_reason"],5000)
+            waiting=record["awaiting_context_change"]
+            if not isinstance(waiting,list) or not 1<=len(waiting)<=10:raise ValueError("No-viable rebrainstorm needs explicit unblock conditions")
+            for condition in waiting:string(condition,1000)
+        with self.connect(write=True) as db:
+            old=db.execute("SELECT 1 FROM records WHERE kind='rebrainstorm' AND id=?",(record["id"],)).fetchone()
+            if old:return self.put(db,"rebrainstorm",record)
+            context=self.context(db);path=self.path_state(db)
+            if context["goal_hash"]!=record["goal_hash"] or context["context_hash"]!=record["context_hash"]:raise Conflict("Rebrainstorm context is stale")
+            if context["active_campaigns"]:raise Conflict("Finish the active campaign before rebrainstorm")
+            parent=path["reorientation"]
+            if not parent or parent["body"]["selected_candidate"] is not None:raise Conflict("Rebrainstorm requires a no-viable parent inventory")
+            if parent["id"]!=record["parent_id"] or parent["hash"]!=record["parent_hash"]:raise Conflict("Rebrainstorm does not bind current no-viable inventory")
+            if parent["kind"]=="rebrainstorm" and record["round"]!=parent["body"]["round"]+1:raise Conflict("Rebrainstorm rounds must be consecutive")
+            if parent["kind"]=="reorientation" and record["round"]!=1:raise Conflict("Initial rebrainstorm round must be1")
+            goal=context["goal"];claims={item["id"] for item in goal["claims"]}
+            for candidate in viable.values():
+                if candidate["parent_claim"] not in claims or candidate["scope"] not in goal["allowed_scopes"]:raise Conflict("Viable candidate exceeds current goal claim/scope")
+                if sum(candidate["budget"].values())>context["accounting"]["remaining_seconds"]:raise Conflict("Viable candidate complete route exceeds aggregate remainder")
+            return self.put(db,"rebrainstorm",record)
 
     def proposal(self, record):
         base(record, {"goal_hash", "campaign_id", "contract_sha256", "parent_claim", "scope", "kind", "decision", "blocker", "endpoint_relevance", "outcomes", "alternatives", "budget"})
@@ -589,7 +662,8 @@ class GoalLedger:
             "active_campaign" if context["active_campaigns"] else
             "ready_for_admission" if ready else
             "reorientation_required" if pending else
-            "no_viable_candidate" if path and path["selected_candidate"] is None else
+            "rebrainstorm_required" if path and path["selected_candidate"] is None and any(t.startswith("rebrainstorm_required:") for t in context["triggers"]) else
+            "awaiting_context_change" if path and path["selected_candidate"] is None else
             "candidate_selected" if path else
             "goal_review_required"
         )
@@ -598,6 +672,7 @@ class GoalLedger:
             "Admitted design may finish; next campaign requires fresh assessment" if context["active_campaigns"] else
             "Exact proposal has a fresh goal assessment; dispatch still checks all bindings and gates" if ready else
             "Terminal campaign checkpoint requires an evidence-backed outer-loop candidate inventory" if pending else
+            "No viable candidate in the current slate; publish a context-changing rebrainstorm" if path and path["selected_candidate"] is None and any(t.startswith("rebrainstorm_required:") for t in context["triggers"]) else
             path["no_viable_reason"] if path and path["selected_candidate"] is None else
             "Outer loop selected a viable candidate; publish its exact bound proposal and fresh assessment" if path else
             "Bind the next proposal to a fresh goal assessment before admission"

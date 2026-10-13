@@ -199,9 +199,24 @@ class GoalTests(unittest.TestCase):
         record=self.reorientation(p,name='no-route',status='blocked',selected=False)
         self.ledger.reorient(record)
         snapshot=self.ledger.snapshot()
-        self.assertEqual(snapshot['state'],'no_viable_candidate')
-        self.assertEqual(snapshot['reason'],'No candidate has a qualified complete route.')
+        self.assertEqual(snapshot['state'],'rebrainstorm_required')
         with self.assertRaisesRegex(Conflict,'no viable'):self.ledger.proposal(p)
+        fresh=self.proposal(self.config('fresh-context'),name='fresh-context-proposal',kind='evidence')
+        candidate=dict(id='fresh-source',proposal_id=fresh['id'],parent_claim=fresh['parent_claim'],scope=fresh['scope'],kind=fresh['kind'],decision=fresh['decision'],endpoint_relevance=fresh['endpoint_relevance'],novelty='New authority and infrastructure make this distinct.',status='viable',reason='The prior blocker changed.',budget=fresh['budget'],evidence=self.evidence())
+        current=self.ledger.snapshot();parent=current['reorientation']
+        record=dict(schema_version=1,id='rebrainstorm-1',prompt_verbatim='Fix the issue then continue.',goal_hash=current['goal_hash'],context_hash=current['context_hash'],parent_id=parent['id'],parent_hash=next(r['hash'] for r in current['records'] if r['kind']=='reorientation' and r['id']==parent['id']),round=1,unresolved_claim='Does compression preserve quality?',novelty_basis=[dict(kind='authority_change',description='User authorized the corrected fresh campaign.',evidence=self.evidence())],candidates=[candidate],selected_candidate='fresh-source',no_viable_reason=None,awaiting_context_change=[],next_checkpoint='Publish selected proposal.')
+        self.ledger.rebrainstorm(record)
+        self.assertEqual(self.ledger.snapshot()['state'],'candidate_selected')
+        self.ledger.proposal(fresh)
+
+    def test_rebrainstorm_without_viable_candidate_waits_for_context_change(self):
+        c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)
+        controller.submit('one');controller.submit('two');controller.run();self.ledger.checkpoint(self.cp())
+        p=self.proposal(self.config('blocked-next'),name='blocked-proposal');self.ledger.reorient(self.reorientation(p,name='no-route',status='blocked',selected=False))
+        current=self.ledger.snapshot();parent=current['reorientation'];parent_hash=next(r['hash'] for r in current['records'] if r['kind']=='reorientation' and r['id']==parent['id'])
+        blocked=dict(id='still-blocked',proposal_id='still-blocked-proposal',parent_claim='quality-speed',scope='released-evidence',kind='diagnostic',decision='Wait for external labels.',endpoint_relevance='No independent labels exist.',novelty='External coordination was checked.',status='blocked',reason='Labels remain unavailable.',budget=dict(campaign_seconds=1,downstream_seconds=0),evidence=self.evidence())
+        record=dict(schema_version=1,id='rebrainstorm-wait',prompt_verbatim='Rebrainstorm.',goal_hash=current['goal_hash'],context_hash=current['context_hash'],parent_id=parent['id'],parent_hash=parent_hash,round=1,unresolved_claim='Does compression preserve quality?',novelty_basis=[dict(kind='external_coordination',description='Checked whether an external panel is available.',evidence=self.evidence())],candidates=[blocked],selected_candidate=None,no_viable_reason='External labels remain unavailable.',awaiting_context_change=['An independent label panel becomes available.'],next_checkpoint='Wait for external panel availability.')
+        self.ledger.rebrainstorm(record);snapshot=self.ledger.snapshot();self.assertEqual(snapshot['state'],'awaiting_context_change');self.assertEqual(snapshot['reason'],'External labels remain unavailable.')
 
     def test_reorientation_rejects_stale_context_and_overbudget_viable_candidate(self):
         c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)
