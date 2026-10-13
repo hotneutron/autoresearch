@@ -1,3 +1,3 @@
-__version__ = "0.3.1"
+__version__ = "0.5.0"
 PROTOCOL_VERSION = 2
 STORE_VERSION = 2

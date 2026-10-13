@@ -3,6 +3,7 @@
 The project agent supplies scientific meaning. This ledger enforces bindings,
 scope, prospective review checkpoints and accounting, not scientific relevance.
 Revision History: 2026-10-12 — initial goal/proposal/assessment/admission ledger.
+2026-10-13 — require outer-loop reorientation after a terminal campaign checkpoint.
 """
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ from .review import Conflict, digest, encode, identifier, now, string
 ACTIONS = {"CONTINUE", "PIVOT", "DEFER", "STOP", "ASK_HUMAN"}
 OUTCOMES = {"supported", "unsupported", "inconclusive", "invalid"}
 TERMINAL = {"completed", "crashed", "interrupted", "blocked"}
+CANDIDATE_STATES = {"viable", "rejected", "blocked"}
 
 
 def fields(value, required, optional=()):
@@ -149,6 +151,31 @@ class GoalLedger:
             raise Conflict("Publish the original project goal first")
         return GoalLedger.record(db, "goal", row["id"])
 
+    @staticmethod
+    def path_state(db):
+        """Return the current terminal-checkpoint/reorientation relationship.
+
+        A later goal revision is itself a material reorientation and supersedes an
+        older candidate inventory. Proposal/assessment records deliberately do not
+        affect this state because they are not goal-context events.
+        """
+        checkpoint = db.execute(
+            "SELECT seq,id,hash,body FROM records WHERE kind='checkpoint' ORDER BY seq DESC LIMIT 1"
+        ).fetchone()
+        reorientation = db.execute(
+            "SELECT seq,id,hash,body FROM records WHERE kind='reorientation' ORDER BY seq DESC LIMIT 1"
+        ).fetchone()
+        goal = db.execute(
+            "SELECT seq,id FROM records WHERE kind='goal' ORDER BY seq DESC LIMIT 1"
+        ).fetchone()
+        if not checkpoint or (goal and goal["seq"] > checkpoint["seq"]):
+            return {"checkpoint": None, "reorientation": None, "pending": False}
+        cp = {**dict(checkpoint), "body": json.loads(checkpoint["body"])}
+        if not reorientation or reorientation["seq"] < checkpoint["seq"]:
+            return {"checkpoint": cp, "reorientation": None, "pending": True}
+        record = {**dict(reorientation), "body": json.loads(reorientation["body"])}
+        return {"checkpoint": cp, "reorientation": record, "pending": False}
+
     def anchor(self, record):
         base(record, {"revision", "project_id", "goal", "claims", "non_goals", "allowed_scopes", "budget", "drift_policy"})
         identifier(record["project_id"])
@@ -202,7 +229,7 @@ class GoalLedger:
         admissions = [dict(r) for r in db.execute("SELECT * FROM admissions ORDER BY created,campaign")]
         rows = [dict(r) for r in db.execute("SELECT seq,kind,id,hash FROM records ORDER BY seq")]
         # Assessment/proposal authoring does not itself change research context.
-        events = [r for r in rows if r["kind"] in {"goal", "control", "checkpoint"}]
+        events = [r for r in rows if r["kind"] in {"goal", "control", "checkpoint", "reorientation"}]
         spent = goal["budget"]["imported_seconds"] + sum(a["charged"] for a in admissions)
         reserved = sum(a["reserved"] for a in admissions if a["state"] == "active")
         checkpoints = []
@@ -235,6 +262,15 @@ class GoalLedger:
             triggers.append("diagnostic_runtime_limit")
         if unchanged >= policy["max_unchanged_checkpoints"]:
             triggers.append("unchanged_blocker_limit")
+        path = self.path_state(db)
+        if path["pending"]:
+            triggers.append("outer_loop_reorientation_required")
+        elif path["reorientation"]:
+            record = path["reorientation"]["body"]
+            triggers.append(
+                ("reorientation:" if record["selected_candidate"] is not None else "no_viable_candidate:")
+                + record["id"]
+            )
         result = {"goal_hash": goal_row["hash"], "goal": goal, "events": events,
                   "accounting": {"spent_seconds": spent, "reserved_seconds": reserved,
                     "max_seconds": goal["budget"]["max_seconds"],
@@ -243,8 +279,86 @@ class GoalLedger:
                   "triggers": sorted(set(triggers)), "stopped": stopped,
                   "diagnostic_campaigns": len(diagnostics), "unchanged_checkpoints": unchanged,
                   "admissions": admissions}
+        result["reorientation"] = path["reorientation"]["body"] if path["reorientation"] else None
+        result["reorientation_checkpoint"] = (
+            {key: path["checkpoint"][key] for key in ("id", "hash")} if path["checkpoint"] else None
+        )
         result["context_hash"] = hashed(result)
         return result
+
+    def reorient(self, record):
+        """Record the public outer-loop candidate inventory after a checkpoint.
+
+        The project agent authors scientific candidates and concise rationales.
+        This ledger validates bindings, scope and complete budgets; it does not
+        generate ideas, infer private reasoning or claim independent review.
+        """
+        base(record, {"goal_hash", "context_hash", "checkpoint_id", "checkpoint_hash",
+                      "unresolved_claim", "exhausted_path", "candidates",
+                      "selected_candidate", "no_viable_reason", "next_checkpoint"})
+        for key in ("goal_hash", "context_hash", "checkpoint_hash"):
+            hash_text(record[key])
+        identifier(record["checkpoint_id"])
+        for key in ("unresolved_claim", "exhausted_path", "next_checkpoint"):
+            string(record[key], 5000 if key == "exhausted_path" else 2000)
+        if not isinstance(record["candidates"], list) or not 1 <= len(record["candidates"]) <= 10:
+            raise ValueError("Reorientation requires 1–10 explicit candidates")
+        seen = set(); viable = {}
+        for candidate in record["candidates"]:
+            fields(candidate, {"id", "proposal_id", "parent_claim", "scope", "kind",
+                               "decision", "endpoint_relevance", "novelty", "status",
+                               "reason", "budget", "evidence"})
+            identifier(candidate["id"]); identifier(candidate["proposal_id"]); identifier(candidate["parent_claim"])
+            if candidate["id"] in seen:
+                raise ValueError("Duplicate reorientation candidate")
+            seen.add(candidate["id"])
+            if candidate["kind"] not in {"diagnostic", "modeling", "evidence"}:
+                raise ValueError("Unknown candidate proposal kind")
+            if candidate["status"] not in CANDIDATE_STATES:
+                raise ValueError("Unknown reorientation candidate status")
+            for key in ("scope", "decision", "endpoint_relevance", "novelty", "reason"):
+                string(candidate[key], 2000)
+            fields(candidate["budget"], {"campaign_seconds", "downstream_seconds"})
+            number(candidate["budget"]["campaign_seconds"], positive=True)
+            number(candidate["budget"]["downstream_seconds"])
+            evidence(candidate["evidence"])
+            if candidate["status"] == "viable":
+                viable[candidate["id"]] = candidate
+        selected = record["selected_candidate"]
+        if viable:
+            if selected not in viable:
+                raise ValueError("Select exactly one viable reorientation candidate")
+            if record["no_viable_reason"] is not None:
+                raise ValueError("A selected viable candidate cannot claim no viable path")
+        else:
+            if selected is not None:
+                raise ValueError("Cannot select a rejected or blocked candidate")
+            string(record["no_viable_reason"], 5000)
+        with self.connect(write=True) as db:
+            old = db.execute(
+                "SELECT 1 FROM records WHERE kind='reorientation' AND id=?", (record["id"],)
+            ).fetchone()
+            if old:
+                return self.put(db, "reorientation", record)
+            context = self.context(db)
+            path = self.path_state(db)
+            if context["goal_hash"] != record["goal_hash"] or context["context_hash"] != record["context_hash"]:
+                raise Conflict("Reorientation context is stale")
+            if context["active_campaigns"]:
+                raise Conflict("Finish the active campaign before outer-loop reorientation")
+            if not path["pending"] or not path["checkpoint"]:
+                raise Conflict("No unreoriented terminal campaign checkpoint")
+            if (path["checkpoint"]["id"] != record["checkpoint_id"]
+                    or path["checkpoint"]["hash"] != record["checkpoint_hash"]):
+                raise Conflict("Reorientation does not bind the latest checkpoint")
+            goal = context["goal"]
+            claims = {item["id"] for item in goal["claims"]}
+            for candidate in viable.values():
+                if candidate["parent_claim"] not in claims or candidate["scope"] not in goal["allowed_scopes"]:
+                    raise Conflict("Viable candidate exceeds current goal claim/scope")
+                if sum(candidate["budget"].values()) > context["accounting"]["remaining_seconds"]:
+                    raise Conflict("Viable candidate complete route exceeds aggregate remainder")
+            return self.put(db, "reorientation", record)
 
     def proposal(self, record):
         base(record, {"goal_hash", "campaign_id", "contract_sha256", "parent_claim", "scope", "kind", "decision", "blocker", "endpoint_relevance", "outcomes", "alternatives", "budget"})
@@ -276,6 +390,24 @@ class GoalLedger:
                     raise Conflict("Proposal refers to a superseded goal")
                 if record["parent_claim"] not in {c["id"] for c in goal["claims"]} or record["scope"] not in goal["allowed_scopes"]:
                     raise Conflict("Proposal exceeds goal claim/scope authorization")
+                path = self.path_state(db)
+                if path["pending"]:
+                    raise Conflict("Publish outer-loop reorientation before a successor proposal")
+                if path["reorientation"]:
+                    reorientation = path["reorientation"]["body"]
+                    selected_id = reorientation["selected_candidate"]
+                    if selected_id is None:
+                        raise Conflict("Reorientation found no viable successor proposal")
+                    selected = next(item for item in reorientation["candidates"] if item["id"] == selected_id)
+                    bindings = {
+                        "id": "proposal_id", "parent_claim": "parent_claim", "scope": "scope",
+                        "kind": "kind", "decision": "decision", "endpoint_relevance": "endpoint_relevance",
+                    }
+                    for proposal_key, candidate_key in bindings.items():
+                        if record[proposal_key] != selected[candidate_key]:
+                            raise Conflict("Proposal differs from selected reorientation candidate")
+                    if record["budget"] != selected["budget"]:
+                        raise Conflict("Proposal budget differs from selected reorientation candidate")
             return self.put(db, "proposal", record)
 
     def control(self, record):
@@ -450,7 +582,25 @@ class GoalLedger:
                       and r["body"]["context_hash"] == context["context_hash"]
                       and r["body"]["goal_hash"] == context["goal_hash"]
                       and r["body"]["action"] in {"CONTINUE", "PIVOT"}), None)
-        context["state"] = "stopped" if context["stopped"] else "active_campaign" if context["active_campaigns"] else "ready_for_admission" if ready else "goal_review_required"
-        context["reason"] = "Explicit stop; requires resume and fresh assessment" if context["stopped"] else "Admitted design may finish; next campaign requires fresh assessment" if context["active_campaigns"] else "Exact proposal has a fresh goal assessment; dispatch still checks all bindings and gates" if ready else "Bind the next proposal to a fresh goal assessment before admission"
+        path = context["reorientation"]
+        pending = "outer_loop_reorientation_required" in context["triggers"]
+        context["state"] = (
+            "stopped" if context["stopped"] else
+            "active_campaign" if context["active_campaigns"] else
+            "ready_for_admission" if ready else
+            "reorientation_required" if pending else
+            "no_viable_candidate" if path and path["selected_candidate"] is None else
+            "candidate_selected" if path else
+            "goal_review_required"
+        )
+        context["reason"] = (
+            "Explicit stop; requires resume and fresh assessment" if context["stopped"] else
+            "Admitted design may finish; next campaign requires fresh assessment" if context["active_campaigns"] else
+            "Exact proposal has a fresh goal assessment; dispatch still checks all bindings and gates" if ready else
+            "Terminal campaign checkpoint requires an evidence-backed outer-loop candidate inventory" if pending else
+            path["no_viable_reason"] if path and path["selected_candidate"] is None else
+            "Outer loop selected a viable candidate; publish its exact bound proposal and fresh assessment" if path else
+            "Bind the next proposal to a fresh goal assessment before admission"
+        )
         context["generated"] = now()
         return context

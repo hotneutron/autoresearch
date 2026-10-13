@@ -1,5 +1,6 @@
 """Goal-linked admission, drift steering, aggregate accounting and safety.
 Revision History: 2026-10-12 — initial portable-project behavioral tests.
+2026-10-13 — outer-loop reorientation and selected-candidate binding.
 """
 import copy
 import json
@@ -75,6 +76,23 @@ class GoalTests(unittest.TestCase):
         return dict(schema_version=1,id=name,prompt_verbatim=PROMPT,campaign_id=campaign,outcome=outcome,
             decision_changed=progress,blocker_changed=False,explanation='Full result retained; review parent modeling claim.',evidence=self.evidence())
 
+    def reorientation(self, proposal, *, name='reorient', status='viable', selected=True):
+        snapshot=self.ledger.snapshot();checkpoint=snapshot['reorientation_checkpoint']
+        candidate=dict(id='compression-pivot',proposal_id=proposal['id'],parent_claim=proposal['parent_claim'],
+            scope=proposal['scope'],kind=proposal['kind'],decision=proposal['decision'],
+            endpoint_relevance=proposal['endpoint_relevance'],
+            novelty='Changes the label/objective path instead of repeating the exhausted variance study.',
+            status=status,reason='Directly changes the unresolved quality-speed decision.',
+            budget=proposal['budget'],evidence=self.evidence())
+        return dict(schema_version=1,id=name,prompt_verbatim='Brainstorm orthogonal next paths.',
+            goal_hash=snapshot['goal_hash'],context_hash=snapshot['context_hash'],
+            checkpoint_id=checkpoint['id'],checkpoint_hash=checkpoint['hash'],
+            unresolved_claim='Does compression improve upload time at fixed quality?',
+            exhausted_path='The completed variance-oriented campaign cannot answer the quality endpoint.',
+            candidates=[candidate],selected_candidate=candidate['id'] if selected else None,
+            no_viable_reason=None if selected else 'No candidate has a qualified complete route.',
+            next_checkpoint='Publish the selected exact proposal or report no viable candidate.')
+
     def test_anchor_immutable_revision_and_historical_accounting(self):
         self.assertTrue(self.ledger.anchor(self.goal)['duplicate'])
         g=copy.deepcopy(self.goal);g['goal']='Different text'
@@ -149,9 +167,62 @@ class GoalTests(unittest.TestCase):
         self.assertEqual(s['accounting']['reserved_seconds'],0)
         self.assertIn('diagnostic_campaign_limit',s['triggers']);self.assertIn('unchanged_blocker_limit',s['triggers'])
         self.assertFalse(self.ledger.gate(c,controller.directory)['allowed'])
-        c2=self.config('new-campaign');p=self.proposal(c2,name='next');pr=self.ledger.proposal(p)
+        c2=self.config('new-campaign');p=self.proposal(c2,name='next')
+        with self.assertRaisesRegex(Conflict,'reorientation'):self.ledger.proposal(p)
+        self.ledger.reorient(self.reorientation(p));pr=self.ledger.proposal(p)
         with self.assertRaisesRegex(Conflict,'Unaddressed'):self.ledger.assess(self.assessment(p,pr,name='next-review',address=False))
         self.ledger.assess(self.assessment(p,pr,name='next-review'))
+
+    def test_terminal_checkpoint_requires_reorientation_and_binds_selected_candidate(self):
+        c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)
+        controller.submit('one');controller.submit('two');controller.run();self.ledger.checkpoint(self.cp())
+        snapshot=self.ledger.snapshot()
+        self.assertEqual(snapshot['state'],'reorientation_required')
+        self.assertIn('outer_loop_reorientation_required',snapshot['triggers'])
+        c2=self.config('orthogonal');p=self.proposal(c2,name='orthogonal-proposal',kind='evidence')
+        record=self.reorientation(p);document=self.root/'reorientation.json';atomic_json(document,record)
+        receipt=json.loads(subprocess.check_output([sys.executable,'-m','autoresearch_runtime.cli','--store',str(self.ledger.directory),'goal','reorient',str(document)],text=True))
+        self.assertFalse(receipt['duplicate'])
+        selected=self.ledger.snapshot()
+        self.assertEqual(selected['state'],'candidate_selected')
+        self.assertEqual(selected['reorientation']['selected_candidate'],'compression-pivot')
+        bad=copy.deepcopy(p);bad.update(id='different-proposal')
+        with self.assertRaisesRegex(Conflict,'selected reorientation'):self.ledger.proposal(bad)
+        pr=self.ledger.proposal(p);a=self.assessment(p,pr,name='orthogonal-review')
+        self.assertIn('reorientation:'+record['id'],{item['trigger'] for item in a['trigger_dispositions']})
+        self.ledger.assess(a)
+
+    def test_explicit_no_viable_candidate_is_visible_and_blocks_successor(self):
+        c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)
+        controller.submit('one');controller.submit('two');controller.run();self.ledger.checkpoint(self.cp())
+        p=self.proposal(self.config('blocked-next'),name='blocked-proposal')
+        record=self.reorientation(p,name='no-route',status='blocked',selected=False)
+        self.ledger.reorient(record)
+        snapshot=self.ledger.snapshot()
+        self.assertEqual(snapshot['state'],'no_viable_candidate')
+        self.assertEqual(snapshot['reason'],'No candidate has a qualified complete route.')
+        with self.assertRaisesRegex(Conflict,'no viable'):self.ledger.proposal(p)
+
+    def test_reorientation_rejects_stale_context_and_overbudget_viable_candidate(self):
+        c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)
+        controller.submit('one');controller.submit('two');controller.run();self.ledger.checkpoint(self.cp())
+        expensive=self.proposal(self.config('expensive'),name='expensive-proposal',downstream=90)
+        with self.assertRaisesRegex(Conflict,'aggregate remainder'):
+            self.ledger.reorient(self.reorientation(expensive,name='too-expensive'))
+        candidate=self.proposal(self.config('fresh'),name='fresh-proposal')
+        stale=self.reorientation(candidate,name='stale-reorientation')
+        self.ledger.control(dict(schema_version=1,id='review-after-checkpoint',prompt_verbatim='Review again.',action='REVIEW',reason='New evidence arrived.'))
+        with self.assertRaisesRegex(Conflict,'stale'):self.ledger.reorient(stale)
+
+    def test_later_goal_revision_is_itself_material_reorientation(self):
+        c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)
+        controller.submit('one');controller.submit('two');controller.run();self.ledger.checkpoint(self.cp())
+        self.assertEqual(self.ledger.snapshot()['state'],'reorientation_required')
+        goal=copy.deepcopy(self.goal);goal.update(id='goal-r2',revision=2,goal='Use an independent quality label source.')
+        self.ledger.anchor(goal)
+        proposal=self.proposal(self.config('new-goal-campaign'),name='new-goal-proposal')
+        self.ledger.proposal(proposal)
+        self.assertNotIn('outer_loop_reorientation_required',self.ledger.snapshot()['triggers'])
 
     def test_no_partial_success_checkpoint_or_overlapping_campaign(self):
         c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)

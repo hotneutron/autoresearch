@@ -1,4 +1,4 @@
-# Goal-linked steering (runtime 0.4.0)
+# Goal-linked steering (runtime 0.5.0)
 
 Goal steering is a persistent control loop **above** immutable execution campaigns. It prevents a sequence of locally valid experiments from silently replacing the user's goal with a prerequisite. It does not launch an LLM, establish scientific relevance, grant new scientific scope, or replace campaign verifiers/approvals.
 
@@ -13,6 +13,8 @@ autoresearch --store /durable/campaign init campaign.json
 autoresearch --store /durable/campaign submit complete-unit
 autoresearch --store /durable/campaign run --port 0
 autoresearch --store /durable/project-goals goal checkpoint checkpoint.json
+autoresearch --store /durable/project-goals goal status
+autoresearch --store /durable/project-goals goal reorient reorientation.json
 ```
 
 Publish the goal before the proposal; inspect the current context before the assessment. Each `goal` command accepts a version1 JSON document with an immutable `id` and exact `prompt_verbatim`. `status` needs no document. Complete fixture builders in `tests/test_goals.py` use an unrelated image-upload project.
@@ -42,6 +44,12 @@ Required fields:
 - `budget: {campaign_seconds, downstream_seconds}`: full credible campaign maximum plus complete dependent obligations needed for the stated decision. A scoped existing-evidence decision can have zero downstream cost; do not claim a full model/confirmation deliverable with zero unfunded obligations.
 
 Compute the binding using `goals.contract_hash(contract)`, which hashes the canonical JSON contract excluding **only** `goal_gate` to avoid circular references. Do not use the byte hash of a differently formatted file. Every other command, gate, source/input closure, budget and authorization field is bound.
+
+After a terminal checkpoint, the ledger rejects a successor proposal until the
+outer loop publishes a reorientation record. If that record selects a viable
+candidate, its exact proposal ID, claim, scope, kind, decision, endpoint relevance
+and complete budget bind the successor proposal. This prevents a locally plausible
+new study from silently bypassing the documented brainstorm/selection checkpoint.
 
 ### Assessment and controls
 
@@ -88,9 +96,57 @@ The ledger independently reads the admitted campaign's runtime database, exact r
 
 Diagnostic count/cost and consecutive unchanged checkpoints remain cumulative and visible. After reaching a prospective limit, each fresh assessment must address the trigger; reassessment does not erase history. Every successor after a checkpoint requires a fresh exact context binding. New evidence, controls or goal revisions invalidate pre-admission assessments, not previously admitted experiments.
 
+### Outer-loop reorientation
+
+After every terminal campaign checkpoint, submit a version1 record before the
+next proposal:
+
+```json
+{
+  "schema_version": 1,
+  "id": "reorient-after-study-1",
+  "prompt_verbatim": "exact user or governing prompt",
+  "goal_hash": "<current goal hash>",
+  "context_hash": "<status context before this record>",
+  "checkpoint_id": "study-1-complete",
+  "checkpoint_hash": "<latest checkpoint hash>",
+  "unresolved_claim": "What parent claim remains unresolved?",
+  "exhausted_path": "Which experiment family is exhausted, and why?",
+  "candidates": [
+    {
+      "id": "independent-label-source",
+      "proposal_id": "independent-label-source-proposal-v1",
+      "parent_claim": "quality-speed",
+      "scope": "released-evidence",
+      "kind": "evidence",
+      "decision": "Test an independent label source.",
+      "endpoint_relevance": "Direct endpoint evidence rather than another variance surrogate.",
+      "novelty": "Changes the label source instead of repeating the exhausted path.",
+      "status": "viable",
+      "reason": "Complete bounded route fits and can change the parent decision.",
+      "budget": {"campaign_seconds": 30, "downstream_seconds": 60},
+      "evidence": [{"path": "/released/report.json", "sha256": "<hash>"}]
+    }
+  ],
+  "selected_candidate": "independent-label-source",
+  "no_viable_reason": null,
+  "next_checkpoint": "Publish the exact selected proposal and fresh assessment."
+}
+```
+
+Candidate `status` is `viable`, `rejected` or `blocked`. Supply1–10 candidates.
+If any candidate is viable, select exactly one. If none is viable, set
+`selected_candidate` to null and provide a nonempty `no_viable_reason`; successor
+proposals then remain blocked. A viable candidate must use an allowed claim/scope
+and its campaign plus downstream maximum must fit the aggregate remainder.
+
+This is concise evidence-backed public rationale, not private chain-of-thought.
+The project agent generates and scientifically judges candidates. The generic
+runtime only validates identity, scope, evidence, budgets and handoff consistency.
+
 ## Review display, scope and limitations
 
-`status` and `review status`/HTTP snapshots for goal-bound stores include the parent goal, goal state, triggers and charged/reserved/limit accounting. The English/Chinese UI has a read-only goal-steering panel with escaped text and no new execution controls. Project-authored goal prose may remain English unless localized separately. Evidence/feedback bytes and permissions are unchanged.
+`status` and `review status`/HTTP snapshots for goal-bound stores include the parent goal, goal state, triggers, charged/reserved/limit accounting and current reorientation inventory. States distinguish `reorientation_required`, `candidate_selected` and `no_viable_candidate`. The English/Chinese UI has a read-only goal-steering panel with escaped text and no new execution controls. Project-authored goal/candidate prose may remain English unless localized separately. Evidence/feedback bytes and permissions are unchanged.
 
 Existing campaigns without `goal_gate` retain legacy behavior. The new feature is explicitly opt-in for **new** contracts; deleting a gate from an already initialized contract conflicts with its immutable store. Host/project policy must require a goal gate for new scientific work; generic runtime compatibility cannot discover undisclosed old stores or prevent an adversarial user from starting a separate unbound ledger. Keep prior campaigns on their pinned runtime; do not mutate an installed runtime or force migration to use the UI.
 
@@ -102,8 +158,17 @@ The ledger's imported accounting is a trusted adapter input, and later settlemen
 impl the generic steering mechanism, then restart the campaign.
 ```
 
+```text
+when stucked like this, the outer loop should brainstorm on "fundamentally different reliable label source or measurement/model objective", right?
+```
+
+```text
+update the autoresearch framework.
+```
+
 ## Revision History
 
 | Revision | Timestamp | Change |
 |---|---|---|
 | r1 | 2026-10-12 16:35 -0700 | Documented versioned goals, decision-linked proposals, fresh assessments/controls, transactionally enforced complete-campaign admission, failure-inclusive settlement, safe course correction, read-only bilingual display and explicit procedural/legacy limits. |
+| r2 | 2026-10-13 00:00 -0700 | Added mandatory post-checkpoint outer-loop reorientation, evidence-backed candidate inventory, exact selected-proposal binding, explicit no-viable state and bilingual read-only presentation. |

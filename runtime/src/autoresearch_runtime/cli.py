@@ -32,7 +32,7 @@ def main():
     review.add_argument("--port", type=int, default=8765)
     review.add_argument("--output", type=Path)
     goal = sub.add_parser("goal", help="Persistent goal steering above campaign execution")
-    goal.add_argument("operation", choices=("anchor", "proposal", "assess", "control", "checkpoint", "status"))
+    goal.add_argument("operation", choices=("anchor", "proposal", "assess", "control", "checkpoint", "reorient", "status"))
     goal.add_argument("document", type=Path, nargs="?")
     steering = sub.add_parser("steer")
     steering.add_argument("record", type=Path)

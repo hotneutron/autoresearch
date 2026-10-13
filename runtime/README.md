@@ -21,7 +21,7 @@ human branch pause. Stop the controller with Ctrl-C; detached experimental units
 keep running to their bounded timeout and retain resource leases. Reopen with the
 same installed runtime and store to reconcile their receipts.
 
-## Goal-linked steering · 0.4.0
+## Goal-linked steering and outer-loop reorientation · 0.5.0
 
 Optional persistent goal steering binds new campaigns to the original goal,
 parent modeling decision, outcome-to-action map and full downstream cost. It
@@ -30,12 +30,18 @@ prospective diagnostic limits trigger reassessment, not automatic rejection.
 First launch transactionally reserves a complete campaign in the project ledger;
 settlement charges all completed/failed units and never resets historical imports.
 A goal hold affects new campaigns, not retrospective sampling in an admitted design.
-Scientific/source/approval/resource gates remain independent.
+After a terminal checkpoint, the outer loop must publish an evidence-backed
+candidate inventory before any successor proposal. It selects one viable
+orthogonal candidate or explicitly records that none is viable; the selected ID,
+scope, decision and complete budget bind the next proposal. Scientific/source/
+approval/resource gates remain independent.
 
 ```bash
 autoresearch --store /durable/project-goals goal anchor goal.json
 autoresearch --store /durable/project-goals goal proposal proposal.json
 autoresearch --store /durable/project-goals goal assess assessment.json
+autoresearch --store /durable/project-goals goal checkpoint checkpoint.json
+autoresearch --store /durable/project-goals goal reorient reorientation.json
 autoresearch --store /durable/project-goals goal status
 ```
 
@@ -43,6 +49,9 @@ See [goal steering and admission](docs/goal-steering.md) for schemas, exact
 `goal_gate` binding, controls/checkpoints and safety limits. The runtime enforces
 records and context, not the scientific soundness of an author's relevance claim.
 Existing campaigns remain pinned; opt in only with new contracts/environments.
+The runtime validates concise public candidate rationale, evidence, scope and
+budgets. The project agent supplies the ideas and scientific judgment; neither the
+CLI nor inbox exposes private chain-of-thought or runs an LLM.
 
 ## Contract and agent interface
 
@@ -209,6 +218,14 @@ procedural separation is enough for now.
 create a chinese version of the review inbox
 ```
 
+```text
+when stucked like this, the outer loop should brainstorm on "fundamentally different reliable label source or measurement/model objective", right?
+```
+
+```text
+update the autoresearch framework.
+```
+
 ## Revision History
 
 | Revision | Timestamp | Change |
@@ -221,3 +238,4 @@ create a chinese version of the review inbox
 | r6 | 2026-10-12 16:35 -0700 | Documented 0.4.0 goal-linked proposal/assessment, enforced complete-campaign admission and failure-inclusive aggregate settlement; latest exact implementation request is preserved in docs/goal-steering.md and its plan. Old pins and scientific gates unchanged. |
 | r7 | 2026-10-12 17:20 -0700 | Documented0.4.1 generic contextual narrative and detailed evidence-first review with optional raw metrics; request/history in contextual-review.md, scientific pins unchanged. |
 | r8 | 2026-10-12 17:55 -0700 | Documented0.4.2 local rendered Markdown/raw source modal, safe inert HTML/links/images and offline/locale verification; exact request in rendered-sources.md, scientific pins unchanged. |
+| r9 | 2026-10-13 00:00 -0700 | Documented0.5.0 mandatory terminal-checkpoint reorientation, selected-candidate proposal binding, explicit no-viable state and public bilingual candidate display; preserved both exact requests. |
