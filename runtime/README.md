@@ -99,6 +99,12 @@ Controller publication. See [contextual review](docs/contextual-review.md).
 Existing packets remain readable; missing explanation is disclosed, not invented.
 Use a separate review-only installation instead of changing scientific runtime pins.
 
+Runtime0.5.1 adds canonical overview effort cross-references. Workflow efforts are
+shown as`E1`, `E2`, ...; authored narrative changes/limitations may reference
+stable effort IDs and render clickable `E# · title` links in both contextual
+sections. Unknown IDs fail validation, translations cannot alter references, and
+older packets remain readable. See [contextual review](docs/contextual-review.md).
+
 ## Review behavior
 
 Packets publish automatically when units are prepared/completed. FYI and advice
@@ -226,6 +232,12 @@ when stucked like this, the outer loop should brainstorm on "fundamentally diffe
 update the autoresearch framework.
 ```
 
+```text
+for the review inbox, in the "overview" card, "What changed, and why it matters" should have related effort index so I can cross check.
+also, provide effort index for "What remains unanswered, and why" as well.
+then execute the planned action.
+```
+
 ## Revision History
 
 | Revision | Timestamp | Change |
@@ -239,3 +251,4 @@ update the autoresearch framework.
 | r7 | 2026-10-12 17:20 -0700 | Documented0.4.1 generic contextual narrative and detailed evidence-first review with optional raw metrics; request/history in contextual-review.md, scientific pins unchanged. |
 | r8 | 2026-10-12 17:55 -0700 | Documented0.4.2 local rendered Markdown/raw source modal, safe inert HTML/links/images and offline/locale verification; exact request in rendered-sources.md, scientific pins unchanged. |
 | r9 | 2026-10-13 00:00 -0700 | Documented0.5.0 mandatory terminal-checkpoint reorientation, selected-candidate proposal binding, explicit no-viable state and public bilingual candidate display; preserved both exact requests. |
+| r10 | 2026-10-13 00:00 -0700 | Documented0.5.1 validated narrative-to-effort references and clickable E-index rendering in both overview context sections; preserved exact request and legacy compatibility. |

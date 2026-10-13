@@ -45,7 +45,10 @@ class WorkflowTests(unittest.TestCase):
         return dict(id=key,packet_id=packet['id'],packet_hash=packet['hash'],kind=kind,comment=text,action_id=None)
 
     def study(self, project="image-compression", revision=1):
-        p=overview_packet(document());p.pop('workflow');p.update(id=f'quality-study-r{revision}',branch='quality-study',revision=revision,project_id=project)
+        p=overview_packet(document());p.pop('workflow')
+        for section in ('changes','limitations'):
+            for item in p['narrative'][section]:item.pop('efforts',None)
+        p.update(id=f'quality-study-r{revision}',branch='quality-study',revision=revision,project_id=project)
         p['actions']=[dict(id='quality-check',label='Run quality check',eligible=True,requires_approval=True,reason='Needs separate data authorization.')]
         p['review_mode']='decision';return p
 
@@ -53,6 +56,8 @@ class WorkflowTests(unittest.TestCase):
         receipt=self.publish();self.assertTrue(self.publish()['duplicate'])
         p=self.inbox.snapshot()['packets'][0];self.assertEqual(p['project_id'],'image-compression');self.assertEqual(p['actions'],[])
         self.assertIn('motivation',p['workflow']['efforts'][0]);self.assertIn('codec',p['workflow']['glossary'][0]['term'])
+        self.assertEqual(p['narrative']['changes'][0]['efforts'],['small-files'])
+        self.assertEqual(p['narrative']['limitations'][0]['efforts'],['small-files'])
         changed=document();changed['summary']='A different conclusion.'
         with self.assertRaises(Conflict):self.publish(changed)
         changed['revision']=2;self.publish(changed);self.assertEqual(self.inbox.snapshot()['packets'][0]['previous']['id'],receipt['id'])
@@ -91,7 +96,10 @@ class WorkflowTests(unittest.TestCase):
         with self.assertRaises(Conflict):self.publish(bad)
 
     def test_project_identity_and_branch_kind_cannot_change(self):
-        self.publish();p=overview_packet(document());p.pop('workflow');p['revision']=2;p['id']='image-compression-overview-r2';p['project_id']='image-compression'
+        self.publish();p=overview_packet(document());p.pop('workflow')
+        for section in ('changes','limitations'):
+            for item in p['narrative'][section]:item.pop('efforts',None)
+        p['revision']=2;p['id']='image-compression-overview-r2';p['project_id']='image-compression'
         with self.assertRaises(Conflict):self.inbox.publish(p)
         self.inbox.publish(self.study());p=self.study('other-project',2)
         with self.assertRaisesRegex(Conflict,'project identity'):self.inbox.publish(p)

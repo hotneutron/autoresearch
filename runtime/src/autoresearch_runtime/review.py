@@ -183,7 +183,13 @@ class Inbox:
             if p["schema_version"] != 2:
                 raise ValueError("Contextual narrative requires schema2 review packets")
             from .narrative import validate
-            validate(p["narrative"], len(sources))
+            effort_ids = None
+            workflow = p.get("workflow")
+            if isinstance(workflow, dict) and isinstance(workflow.get("efforts"), list):
+                values = [item.get("id") for item in workflow["efforts"] if isinstance(item, dict)]
+                if len(values) == len(workflow["efforts"]) and all(isinstance(value, str) for value in values):
+                    effort_ids = set(values)
+            validate(p["narrative"], len(sources), effort_ids)
         if "project_id" in p:
             identifier(p["project_id"])
         if "workflow" in p:

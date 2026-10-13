@@ -1,5 +1,6 @@
 """Generic source-backed review explanations, not inferred science or permits.
 Revision History: 2026-10-12 — initial narrative schema/builder/locale tests.
+2026-10-13 — workflow-effort cross-reference validation.
 """
 import copy
 import json
@@ -35,6 +36,16 @@ class NarrativeTests(unittest.TestCase):
         self.assertIn('quality',default['changed'][0]);self.assertIn('independent quality',default['limitations'][0])
         self.assertNotIn('private internal', ' '.join(default['limitations']))
         self.assertEqual(default['narrative']['insights'][0]['interpretation'],document()['workflow']['efforts'][0]['rationale'])
+        self.assertEqual(default['narrative']['changes'][0]['efforts'],['small-files'])
+        self.assertEqual(default['narrative']['limitations'][0]['efforts'],['small-files'])
+
+    def test_related_efforts_are_canonical_and_must_exist_in_workflow(self):
+        n=narrative();n['changes'][0]['efforts']=['small-files'];n['limitations'][0]['efforts']=['small-files']
+        validate(n,1,{'small-files'})
+        d=document();d['narrative']=n;self.inbox.publish(overview_packet(d))
+        bad=copy.deepcopy(n);bad['changes'][0]['efforts']=['unknown-effort']
+        with self.assertRaisesRegex(ValueError,'unknown workflow effort'):validate(bad,1,{'small-files'})
+        with self.assertRaisesRegex(ValueError,'require a workflow'):validate(n,1)
 
     def test_schema_rejects_missing_context_bad_refs_and_duplicate_ids(self):
         for section,key in [('changes','before'),('limitations','goal_impact'),('insights','interpretation')]:

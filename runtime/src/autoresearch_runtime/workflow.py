@@ -116,7 +116,7 @@ def overview_packet(document):
     from .narrative import from_workflow, validate
     from .review import strings
     narrative = document.get("narrative") or from_workflow(workflow, document["summary"])
-    validate(narrative, len(document["sources"]))
+    validate(narrative, len(document["sources"]), {effort["id"] for effort in workflow["efforts"]})
     changed = document.get("changed", [document["summary"], "The current question is: " + workflow["current_question"]])
     limitations = document.get("limitations", ["Next evidence needed: " + workflow["next_checkpoint"],
         "This overview explains the reported findings; it does not itself measure whether the project has met: " + workflow["success_criteria"][0]])

@@ -49,6 +49,15 @@ Optional packet field `narrative`:
 
 All3 sections are required when `narrative` is supplied. Changes/limitations allow1–6items; insights1–12. Each item has a unique stable ID, all explanatory text fields, and distinct valid released source indices. Empty text, omitted context, invalid/bool/out-of-range/duplicate references and unknown fields are rejected. The narrative is part of the immutable packet hash; corrections require a new packet revision. Legacy packets stay valid and show an explicit missing-explanation note rather than a fabricated insight.
 
+For workflow overview packets, each change or limitation may also declare
+`"efforts": ["stable-effort-id", ...]`. IDs must be unique and exist in the
+canonical workflow effort list;1–12 references are allowed. The UI numbers efforts
+as`E1`, `E2`, ... and renders related references in **What changed, and why it
+matters** and **What remains unanswered, and why** as clickable `E# · title`
+indices. These are separate from evidence-source numbers. Study packets without a
+workflow cannot use effort references, translations cannot alter them, and older
+packets without references remain valid.
+
 ### Authoring rules
 
 - Say what was actually compared and controlled; explain abbreviations, estimator/metric meaning and baseline.
@@ -91,8 +100,15 @@ also "3-minute evidence review · metrics, controls and scope" should give detai
 make the meta change to the auto-research framework.
 ```
 
+```text
+for the review inbox, in the "overview" card, "What changed, and why it matters" should have related effort index so I can cross check.
+also, provide effort index for "What remains unanswered, and why" as well.
+then execute the planned action.
+```
+
 ## Revision History
 
 | Revision | Timestamp | Change |
 |---|---|---|
 | r1 | 2026-10-12 17:20 -0700 | Documented generic source-backed contextual explanations, narrative-first evidence review, builder/controller authoring, immutable/locale boundaries and explicit non-inference/legacy limits; all exact requests preserved. |
+| r2 | 2026-10-13 00:00 -0700 | Added validated workflow-effort references and clickable E-index rendering in both requested narrative sections; preserved legacy packets and exact request. |

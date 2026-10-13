@@ -1,5 +1,6 @@
 """Source-backed public review explanations; never infer science or authority.
 Revision History: 2026-10-12 — contextual changes/questions and narrative evidence.
+2026-10-13 — optional validated workflow-effort cross-references.
 """
 from .review import identifier, string
 
@@ -8,10 +9,11 @@ SECTION_FIELDS = {
     'limitations': {'id', 'question', 'why_unanswered', 'goal_impact', 'next_evidence', 'evidence'},
     'insights': {'id', 'title', 'comparison', 'support', 'finding', 'interpretation', 'goal_relevance', 'caveat', 'evidence'},
 }
+OPTIONAL_FIELDS = {'changes': {'efforts'}, 'limitations': {'efforts'}, 'insights': set()}
 TEXT_FIELDS = {k: v - {'id', 'evidence'} for k, v in SECTION_FIELDS.items()}
 
 
-def validate(value, source_count):
+def validate(value, source_count, effort_ids=None):
     if not isinstance(value, dict) or set(value) != {'schema_version', *SECTION_FIELDS} or type(value['schema_version']) is not int or value['schema_version'] != 1:
         raise ValueError('Unsupported or incomplete contextual review narrative')
     for section, required in SECTION_FIELDS.items():
@@ -20,7 +22,7 @@ def validate(value, source_count):
             raise ValueError('Explain changes, unanswered questions and evidence in bounded lists')
         seen = set()
         for item in items:
-            if not isinstance(item, dict) or set(item) != required:
+            if not isinstance(item, dict) or not required <= item.keys() or item.keys() - required - OPTIONAL_FIELDS[section]:
                 raise ValueError('Narrative item needs its full explanatory context')
             identifier(item['id'])
             if item['id'] in seen:
@@ -31,6 +33,16 @@ def validate(value, source_count):
             indices = item['evidence']
             if not isinstance(indices, list) or not indices or len(set(indices)) != len(indices) or any(type(i) is not int or not 0 <= i < source_count for i in indices):
                 raise ValueError('Narrative must reference distinct released evidence sources')
+            if 'efforts' in item:
+                refs = item['efforts']
+                if effort_ids is None:
+                    raise ValueError('Related effort references require a workflow overview')
+                if not isinstance(refs, list) or not refs or len(refs) > 12 or len(set(refs)) != len(refs):
+                    raise ValueError('Narrative needs 1–12 distinct related effort ids')
+                for effort_id in refs:
+                    identifier(effort_id)
+                    if effort_id not in effort_ids:
+                        raise ValueError('Narrative references an unknown workflow effort')
     return value
 
 
@@ -43,6 +55,6 @@ def from_workflow(workflow, summary):
             limitations=[dict(id='next-evidence',question=workflow['current_question'],why_unanswered='No study findings are recorded in this overview yet.',goal_impact=workflow['goal'],next_evidence=workflow['next_checkpoint'],evidence=[0])],
             insights=[dict(id='starting-point',title='What is known at this checkpoint',comparison=workflow['current_question'],support='No completed study support has been supplied.',finding=summary,interpretation='This is the author-reported project context, not an experimental conclusion.',goal_relevance=workflow['goal'],caveat='Read the released source and next checkpoint before drawing scientific conclusions.',evidence=[0])])
     return dict(schema_version=1,
-        changes=[dict(id=e['id'],title=e['title'],before=e['question'],after=e['outcome'],why_it_matters=e['rationale'],evidence=e['evidence']) for e in efforts],
-        limitations=[dict(id=e['id'],question=e['question'],why_unanswered=e['uncertainty'],goal_impact=e['motivation'],next_evidence=e['next_step'],evidence=e['evidence']) for e in efforts],
+        changes=[dict(id=e['id'],title=e['title'],before=e['question'],after=e['outcome'],why_it_matters=e['rationale'],evidence=e['evidence'],efforts=[e['id']]) for e in efforts],
+        limitations=[dict(id=e['id'],question=e['question'],why_unanswered=e['uncertainty'],goal_impact=e['motivation'],next_evidence=e['next_step'],evidence=e['evidence'],efforts=[e['id']]) for e in efforts],
         insights=[dict(id=e['id'],title=e['title'],comparison=e['approach'],support='Use the cited study for exact observation counts and grouped support; no independent support is inferred here.',finding=e['outcome'],interpretation=e['rationale'],goal_relevance=e['motivation'],caveat=e['uncertainty'],evidence=e['evidence']) for e in efforts])
