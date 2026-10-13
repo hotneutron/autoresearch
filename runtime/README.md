@@ -69,6 +69,15 @@ fixed contract. Include imported code and environment dependencies in the closur
 The worker verifies declared files before and after execution. Source hashing is
 not an operating-system sandbox against an adversarial same-user process.
 
+## Rendered source reports · 0.4.2
+
+Markdown source snapshots open as readable headings, lists, tables and code in
+the evidence modal, with an exact raw-source toggle. Rendering is local and
+works offline; embedded HTML is escaped, unsafe links are inert and images never
+auto-load. JSON/CSV/TXT remain raw. English/Chinese controls and evidence hashes
+are unchanged. See [rendered source reports](docs/rendered-sources.md).
+Adopt display through a separate review environment; keep scientific pins intact.
+
 ## Contextual evidence review · 0.4.1
 
 The generic inbox now supports source-backed explanations of before/after/meaning,
@@ -211,3 +220,4 @@ create a chinese version of the review inbox
 | r5 | 2026-10-12 12:56 -0700 | Added 0.3.1 Chinese presentation and display-only localization while preserving canonical numeric evidence and authority; preserved exact request. |
 | r6 | 2026-10-12 16:35 -0700 | Documented 0.4.0 goal-linked proposal/assessment, enforced complete-campaign admission and failure-inclusive aggregate settlement; latest exact implementation request is preserved in docs/goal-steering.md and its plan. Old pins and scientific gates unchanged. |
 | r7 | 2026-10-12 17:20 -0700 | Documented0.4.1 generic contextual narrative and detailed evidence-first review with optional raw metrics; request/history in contextual-review.md, scientific pins unchanged. |
+| r8 | 2026-10-12 17:55 -0700 | Documented0.4.2 local rendered Markdown/raw source modal, safe inert HTML/links/images and offline/locale verification; exact request in rendered-sources.md, scientific pins unchanged. |

@@ -439,7 +439,13 @@ class Inbox:
                 for i, source in enumerate(packet["sources"]):
                     source["snapshot"] = self.evidence(packet["id"], i)
         translations = json.loads(TEMPLATE.with_name("zh-CN.json").read_text())
-        return TEMPLATE.read_text().replace("__INITIAL_DATA__", encode(data).replace("<", "\\u003c")).replace("__OFFLINE__", "true" if offline else "false").replace("__ZH_CN__", encode(translations).replace("<", "\\u003c"))
+        values = {"__INITIAL_DATA__": encode(data).replace("<", "\\u003c"),
+                  "__OFFLINE__": "true" if offline else "false",
+                  "__ZH_CN__": encode(translations).replace("<", "\\u003c"),
+                  "__MARKDOWN_JS__": TEMPLATE.with_name("markdown.js").read_text()}
+        # Substitute only the original template. Marker-looking evidence text
+        # must remain exact data, never be replaced with JavaScript or settings.
+        return re.sub("|".join(map(re.escape, values)), lambda match: values[match[0]], TEMPLATE.read_text())
 
 
 def server(inbox, port=8765):

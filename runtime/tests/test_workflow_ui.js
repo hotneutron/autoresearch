@@ -5,6 +5,7 @@ const vm = require('node:vm');
 const html=fs.readFileSync(process.argv[2], 'utf8');
 const source=html.match(/<script>([\s\S]*?)<\/script>/)[1]
   .replace('__OFFLINE__','false').replace('__INITIAL_DATA__','null')
+  .replace('__MARKDOWN_JS__',()=>fs.readFileSync(require('node:path').join(require('node:path').dirname(process.argv[2]),'markdown.js'),'utf8'))
   .replace('__ZH_CN__',fs.readFileSync(require('node:path').join(require('node:path').dirname(process.argv[2]),'zh-CN.json'),'utf8'))
   .replace('refresh();if(!OFFLINE)setInterval(refresh,5000);','');
 const nodes=new Map();

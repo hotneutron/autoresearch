@@ -6,6 +6,7 @@
 <style>
 :root{color-scheme:light;--ink:#192c35;--muted:#536770;--line:#d7e0df;--paper:#fff;--bg:#f3f6f4;--teal:#086a65;--red:#a83933;--amber:#865508}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:var(--teal)}header{padding:28px 5vw 18px;background:#153d3e;color:white}header h1{font-size:28px;letter-spacing:-.7px;margin:2px 0 8px}header p{margin:0;max-width:880px;color:#d5e6e2}.eyebrow{text-transform:uppercase;letter-spacing:1.7px;font-size:11px;font-weight:750}.toolbar{padding:16px 5vw;display:flex;gap:14px;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--line);background:white}.toolbar input{flex:1;min-width:200px;padding:9px 12px;border:1px solid var(--line);border-radius:7px}.toolbar select{padding:9px;border:1px solid var(--line);border-radius:7px}.count{font-size:13px;padding:6px 10px;border-radius:6px;background:#e7f1ed}.layout{display:grid;grid-template-columns:minmax(280px,350px) minmax(0,1fr);max-width:1460px;margin:auto;gap:22px;padding:24px 4vw}.list{display:grid;gap:12px;align-content:start}.card{background:white;border:1px solid var(--line);border-radius:10px;padding:17px;text-align:left;color:var(--ink);width:100%}.card.selected{border:2px solid var(--teal);padding:16px;box-shadow:0 4px 18px #133d3d0c}.card h3{margin:10px 0 7px;font-size:17px;line-height:1.35}.card p{margin:8px 0;font-size:13px}.small{font-size:12px;color:var(--muted)}.badge{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.2px;border-radius:4px;padding:3px 7px;background:#e9eeed;margin-right:5px;margin-bottom:4px}.ready,.valid{background:#dcf1e8;color:#146247}.waiting{background:#fff0d3;color:var(--amber)}.blocked,.invalid,.rejected{background:#fbe5e1;color:var(--red)}.paused,.diagnostic{background:#e9e5f4;color:#635086}.unread{float:right;color:var(--teal);font-size:11px;font-weight:750}.report{background:white;border:1px solid var(--line);border-radius:12px;padding:25px 30px;min-width:0}.report h2{font-size:26px;line-height:1.3;margin:10px 0}.report h3{font-size:17px;margin:24px 0 9px}.report p{margin:9px 0}.lead{font-size:19px;line-height:1.5}.box{border-left:4px solid var(--teal);padding:12px 16px;background:#f0f7f4;border-radius:0 6px 6px 0;margin:16px 0}.box.attention{border-color:#b87b13;background:#fff8e9}.box p{margin:3px 0}.split{display:grid;grid-template-columns:1fr 1fr;gap:18px}ul{padding-left:21px;margin:8px 0}li{margin:6px 0}details{border-top:1px solid var(--line);padding:16px 0}summary{font-weight:700;cursor:pointer}table{width:100%;border-collapse:collapse;font-size:13px;margin:14px 0}th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f5f8f6;font-size:11px;text-transform:uppercase;letter-spacing:.5px}.table-scroll{overflow:auto}.source{border:0;padding:0;background:none;color:var(--teal);text-decoration:underline;text-align:left}.action{border:1px solid var(--line);padding:12px;border-radius:7px;margin:8px 0}.action strong{font-size:14px}.action p{font-size:13px}.feedback{background:#f4f7f6;border:1px solid var(--line);padding:16px;border-radius:8px}.feedback label{display:block;font-size:13px;font-weight:650;margin:10px 0 5px}.feedback select,.feedback textarea{width:100%;padding:9px;border:1px solid #bccac7;border-radius:5px;background:white}.feedback textarea{resize:vertical;min-height:95px}.primary{padding:9px 15px;background:var(--teal);color:white;border:0;border-radius:6px;font-weight:650}.secondary{padding:8px 12px;border:1px solid #a9bfba;background:white;color:var(--teal);border-radius:6px}.primary:disabled{opacity:.5;cursor:not-allowed}.receipt{padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}.receipt blockquote{margin:5px 0;padding-left:12px;border-left:2px solid var(--line);white-space:pre-wrap}#notice{margin:0 5vw;padding:10px 0;color:var(--amber);font-size:13px}dialog{border:1px solid var(--line);border-radius:10px;max-width:1000px;width:90vw;max-height:85vh;padding:22px}dialog::backdrop{background:#173a3bb3}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}footer{padding:12px 5vw 28px;font-size:12px;color:var(--muted)}.empty{padding:30px;color:var(--muted)}.rule{color:var(--muted);font-size:12px}.topline{display:flex;align-items:center;justify-content:space-between;gap:8px}.dim{color:var(--muted)}@media(max-width:920px){.layout{grid-template-columns:1fr;padding:16px}.list{grid-template-columns:repeat(auto-fit,minmax(245px,1fr))}.report{padding:20px}.split{grid-template-columns:1fr}}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #c48e30;outline-offset:3px}
+.markdown-body{line-height:1.7;overflow-wrap:anywhere}.markdown-body h1{font-size:26px}.markdown-body h2{font-size:22px}.markdown-body h3{font-size:19px}.markdown-body h4{font-size:17px}.markdown-body pre{padding:12px;background:#f3f6f4;border:1px solid var(--line);border-radius:6px;overflow:auto;white-space:pre}.markdown-body code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:#edf2ef;padding:1px 4px;border-radius:3px}.markdown-body pre code{padding:0;background:none}.markdown-body blockquote{margin:12px 0;padding:4px 16px;border-left:4px solid var(--line);color:var(--muted)}.markdown-body th{text-transform:none;letter-spacing:0;font-size:13px}.markdown-inert{color:var(--muted);font-size:.9em}#evidence [hidden]{display:none}
 @media(max-width:600px){.layout{grid-template-columns:minmax(0,1fr)}.list{display:flex;overflow-x:auto;min-width:0;padding:2px;scroll-snap-type:x proximity}.list .card{flex:0 0 88%;scroll-snap-align:start}.report h2{font-size:23px}}
 </style>
 </head>
@@ -15,13 +16,15 @@
 <div id="notice" role="status" aria-live="polite"></div>
 <details style="margin:0 5vw;padding:12px 0"><summary data-i18n>New here? How to read results and steer</summary><p data-i18n>Start here explains the project's goal and why each effort was tried. A study report gives its result and the evidence used to make a decision.</p><p data-i18n>Evidence validity means the stated checks passed; it is not proof of the hypothesis or permission to deploy. Diagnostic means useful but limited evidence. A failed result can still teach us what to try next.</p><p data-i18n>Comment suggests a direction. Approve authorizes only a named eligible study action at this exact report revision. Pause takes effect on that study at its next safe complete-unit checkpoint. It does not terminate a running experiment mid-unit. Overview comments never grant these permissions.</p><p data-i18n>Glossaries explain domain terms. Metrics state units, number of observations and acceptance rules. Expand Source reports for immutable evidence; publication times tell you how fresh the summary is.</p><p class="small" data-i18n>Source evidence and feedback remain in their original language; translations change presentation only.</p></details>
 <main class="layout"><nav class="list" id="list" aria-label="Experiment reports"></nav><article class="report" id="detail"></article></main>
-<dialog id="evidence"><div class="topline"><strong id="evidence-title"></strong><button class="secondary" id="close-evidence" data-i18n>Close</button></div><pre id="evidence-body"></pre></dialog>
+<dialog id="evidence" aria-labelledby="evidence-title"><div class="topline"><strong id="evidence-title"></strong><div><button class="secondary" id="evidence-toggle" hidden>View raw source</button> <button class="secondary" id="close-evidence" data-i18n>Close</button></div></div><p id="evidence-format" class="small"></p><div id="evidence-rendered" class="markdown-body" hidden></div><pre id="evidence-body"></pre></dialog>
 <footer id="footer"></footer>
 <script>
 const OFFLINE = __OFFLINE__;
 const ZH_CN = __ZH_CN__;
+__MARKDOWN_JS__
 let data = __INITIAL_DATA__;
 let selected = location.hash.slice(1) || null, token = null, detailSignature = '', polling = false;
+let evidenceState=null,evidenceRequest=0;
 const drafts = new Map();
 const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -66,7 +69,7 @@ function updateLanguage(){
   $('search').placeholder=t('Find a study, branch or result');$('search').setAttribute('aria-label',t('Search reports'));$('filter').setAttribute('aria-label',t('Filter reports'));
   document.title=t('Research review inbox');
 }
-function setLocale(value){locale=value==='zh-CN'?'zh-CN':'en';try{localStorage.setItem('autoresearch-review-language',locale);const url=new URL(location.href);url.searchParams.set('lang',locale);history.replaceState(null,'',url);}catch{}detailSignature='';updateLanguage();render();}
+function setLocale(value){locale=value==='zh-CN'?'zh-CN':'en';try{localStorage.setItem('autoresearch-review-language',locale);const url=new URL(location.href);url.searchParams.set('lang',locale);history.replaceState(null,'',url);}catch{}detailSignature='';updateLanguage();render();if(evidenceState)renderEvidence();}
 function goalSteeringView(){
   const g=data?.goal_steering;if(!g)return '';
   const a=g.accounting;
@@ -139,15 +142,33 @@ async function sendFeedback(packet,value){
   for(let attempt=0;attempt<2;attempt++){try{response=await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json','X-Review-Token':token},body:JSON.stringify(request)});break;}catch(error){if(attempt===1)throw error;}}
   const result=await response.json();if(!response.ok)throw new Error(t(result.error||'Feedback could not be submitted'));notify('Feedback received. Its receipt below will show when the next safe checkpoint consumes it.');await refresh();
 }
+function renderEvidence(){
+  if(!evidenceState)return;
+  const e=evidenceState,source=e.packet.sources[e.index];
+  $('evidence-title').textContent=viewPacket(e.packet).sources[e.index].label;
+  $('evidence-toggle').hidden=!e.markdown||e.raw===null;
+  $('evidence-toggle').textContent=t(e.showRaw?'View rendered Markdown':'View raw source');
+  $('evidence-toggle').setAttribute('aria-pressed',String(e.showRaw));
+  $('evidence-body').hidden=e.markdown&&!e.showRaw&&e.raw!==null;
+  $('evidence-rendered').hidden=!e.markdown||e.showRaw||e.raw===null;
+  $('evidence-body').textContent=e.raw===null?t(e.error||'Loading evidence…'):e.raw;
+  $('evidence-rendered').innerHTML=e.raw!==null&&e.markdown?renderMarkdown(e.raw):'';
+  $('evidence-format').textContent=t(e.markdown?'Rendered Markdown is a reading view. Raw source and its evidence hash are unchanged. HTML and images do not execute or load.':'This source is plain text, JSON or CSV; its exact text is shown.')+' '+source.sha256;
+}
 async function showEvidence(packet,index){
-  const source=packet.sources[index];$('evidence-title').textContent=viewPacket(packet).sources[index].label;$('evidence-body').textContent=t('Loading evidence…');$('evidence').showModal();
-  try{if(OFFLINE)$('evidence-body').textContent=source.snapshot;else{const response=await fetch(`/evidence/${encodeURIComponent(packet.id)}/${index}`);if(!response.ok)throw new Error(t('Evidence unavailable'));$('evidence-body').textContent=await response.text();}}catch(error){$('evidence-body').textContent=t(error.message);}
+  const source=packet.sources[index],request=++evidenceRequest;
+  evidenceState={packet,index,raw:null,error:null,showRaw:false,markdown:/\.md$/i.test(source.path)};
+  renderEvidence();$('evidence').showModal();
+  try{
+    let raw;if(OFFLINE)raw=source.snapshot;else{const response=await fetch(`/evidence/${encodeURIComponent(packet.id)}/${index}`);if(!response.ok)throw new Error(t('Evidence unavailable'));raw=await response.text();}
+    if(request!==evidenceRequest)return;evidenceState.raw=raw;renderEvidence();
+  }catch(error){if(request===evidenceRequest){evidenceState.error=error.message;renderEvidence();}}
 }
 async function refresh(){
   if(OFFLINE){render();return;}if(polling)return;polling=true;
   try{const response=await fetch('/api/inbox');if(!response.ok)throw new Error(t('Inbox unavailable'));data=await response.json();token=data.token;render();document.title=t('Research review inbox');}catch(error){notify(`${t(error.message)}. ${t('Reports remain visible; feedback has not been accepted.')}`);}finally{polling=false;}
 }
-$('search').oninput=renderList;$('filter').onchange=renderList;$('language').onchange=()=>setLocale($('language').value);$('close-evidence').onclick=()=>$('evidence').close();
+$('search').oninput=renderList;$('filter').onchange=renderList;$('language').onchange=()=>setLocale($('language').value);$('close-evidence').onclick=()=>{evidenceRequest++;evidenceState=null;$('evidence').close();};$('evidence').onclose=()=>{evidenceRequest++;evidenceState=null;};$('evidence-toggle').onclick=()=>{if(evidenceState){evidenceState.showRaw=!evidenceState.showRaw;renderEvidence();}};
 updateLanguage();refresh();if(!OFFLINE)setInterval(refresh,5000);
 </script>
 </body>

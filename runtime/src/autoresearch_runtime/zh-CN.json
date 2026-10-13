@@ -1,5 +1,9 @@
 {
   "Research review inbox": "研究复核收件箱",
+  "View raw source": "查看原文",
+  "View rendered Markdown": "查看渲染后的Markdown",
+  "Rendered Markdown is a reading view. Raw source and its evidence hash are unchanged. HTML and images do not execute or load.": "Markdown渲染仅用于阅读，原文和证据哈希不变。不会执行HTML或自动加载图片。",
+  "This source is plain text, JSON or CSV; its exact text is shown.": "该来源是纯文本、JSON或CSV，显示原始文本。",
   "What changed, and why it matters": "改变了什么，为什么重要",
   "What remains unanswered, and why": "哪些问题尚未解答，为什么",
   "Compare the earlier question with the new finding and its effect on the next decision.": "对照此前问题、新发现及它对下一决定的影响。",
