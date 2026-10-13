@@ -1,6 +1,7 @@
 """Goal-linked admission, drift steering, aggregate accounting and safety.
 Revision History: 2026-10-12 — initial portable-project behavioral tests.
 2026-10-13 — outer-loop reorientation and selected-candidate binding.
+2026-10-13 — bounded fresh recovery from procedural invalidity.
 """
 import copy
 import json
@@ -39,6 +40,25 @@ class GoalTests(unittest.TestCase):
 
     def evidence(self):
         return [dict(path=str(self.report),sha256=sha256(self.report))]
+
+    def enable_recovery(self):
+        goal=copy.deepcopy(self.goal);goal.update(id='goal-r2',revision=2)
+        goal['recovery_policy']=dict(auto_fresh_replacement_for_procedural_invalidity=True,
+            auto_minimum_budget_extension=True,max_fresh_replacements_per_checkpoint=1,
+            stop_only_on_scientific_exhaustion=True)
+        self.ledger.anchor(goal);return goal
+
+    def recovery(self, checkpoint, replacement, proposal, complete, extension, *, name='procedural-recovery'):
+        snapshot=self.ledger.snapshot()
+        return dict(schema_version=1,id=name,prompt_verbatim='Recover procedural failures automatically.',
+            goal_hash=snapshot['goal_hash'],context_hash=snapshot['context_hash'],
+            checkpoint_id=checkpoint['id'],checkpoint_hash=checkpoint['hash'],
+            invalidity_kind='procedural',failure_summary='Frozen verifier retained an obsolete count.',
+            correction='Correct the count and preflight the result schema before fresh execution.',
+            evidence=self.evidence(),replacement_campaign_id=replacement['id'],
+            replacement_proposal_id=proposal['id'],complete_recovery_seconds=complete,
+            budget_extension_seconds=extension,scientific_scope_unchanged=True,
+            next_checkpoint='Run one fresh corrected campaign and settle its scientific result.')
 
     def config(self, name='campaign'):
         return dict(schema_version=1,id=name,project_id='image-upload',project_root=str(self.root),
@@ -291,6 +311,42 @@ class GoalTests(unittest.TestCase):
         self.assertGreater(cp['charged_seconds'],0)
         self.assertAlmostEqual(self.ledger.snapshot()['accounting']['spent_seconds'],10+cp['charged_seconds'])
         with self.assertRaises(Conflict):self.ledger.admit(c,self.root/'replacement')
+
+    def test_procedural_recovery_minimally_extends_budget_and_binds_fresh_replacement(self):
+        self.enable_recovery();self.script.write_text("import sys;sys.exit(2)\n")
+        c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)
+        controller.submit('one');controller.run();checkpoint=self.ledger.checkpoint(self.cp(outcome='invalid'))
+        remaining=self.ledger.snapshot()['accounting']['remaining_seconds'];complete=remaining+5
+        replacement=self.config('fresh-replacement');replacement['budget']['max_seconds']=complete
+        proposal=self.proposal(replacement,name='fresh-replacement-proposal')
+        bad=self.recovery(checkpoint,replacement,proposal,complete,4)
+        with self.assertRaisesRegex(Conflict,'minimum'):self.ledger.recover(bad)
+        record=self.recovery(checkpoint,replacement,proposal,complete,5)
+        receipt=self.ledger.recover(record);self.assertFalse(receipt['duplicate'])
+        snapshot=self.ledger.snapshot()
+        self.assertAlmostEqual(snapshot['accounting']['recovery_extension_seconds'],5)
+        self.assertAlmostEqual(snapshot['accounting']['remaining_seconds'],complete)
+        self.assertEqual(snapshot['state'],'reorientation_required')
+        self.assertIn('Procedural recovery is authorized',snapshot['reason'])
+        self.assertIn('procedural_recovery:'+record['id'],snapshot['triggers'])
+        reorientation=self.reorientation(proposal,name='replacement-reorientation')
+        self.ledger.reorient(reorientation);self.ledger.proposal(proposal)
+        with self.assertRaises(Conflict):self.ledger.admit(c,self.root/'old-campaign-retry')
+
+    def test_procedural_recovery_requires_policy(self):
+        self.script.write_text("import sys;sys.exit(2)\n")
+        c=self.config();self.bind(c);controller=Controller(self.root/'campaign',c)
+        controller.submit('one');controller.run();checkpoint=self.ledger.checkpoint(self.cp(outcome='invalid'))
+        replacement=self.config('fresh-replacement');proposal=self.proposal(replacement,name='fresh-replacement-proposal')
+        with self.assertRaisesRegex(Conflict,'policy'):
+            self.ledger.recover(self.recovery(checkpoint,replacement,proposal,8,0))
+
+    def test_procedural_recovery_rejects_scientific_outcome(self):
+        self.enable_recovery();config=self.config();self.bind(config);run=Controller(self.root/'campaign',config)
+        run.submit('one');run.submit('two');run.run();checkpoint=self.ledger.checkpoint(self.cp(outcome='unsupported'))
+        fresh=self.config('fresh-replacement');proposal=self.proposal(fresh,name='fresh-replacement-proposal')
+        with self.assertRaisesRegex(Conflict,'Scientific outcomes'):
+            self.ledger.recover(self.recovery(checkpoint,fresh,proposal,8,0))
 
     def test_active_reservation_survives_restart_and_cap_cannot_shrink(self):
         c=self.config();self.bind(c);self.ledger.admit(c,self.root/'campaign')

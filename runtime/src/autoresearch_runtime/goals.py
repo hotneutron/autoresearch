@@ -5,6 +5,7 @@ scope, prospective review checkpoints and accounting, not scientific relevance.
 Revision History: 2026-10-12 — initial goal/proposal/assessment/admission ledger.
 2026-10-13 — require outer-loop reorientation after a terminal campaign checkpoint.
 2026-10-13 — require context-changing rebrainstorm after a no-viable inventory.
+2026-10-13 — authorize bounded fresh recovery from procedural invalidity.
 """
 from __future__ import annotations
 
@@ -62,8 +63,8 @@ def texts(items, *, empty=False):
         string(item, 2000)
 
 
-def base(record, required):
-    fields(record, {"schema_version", "id", "prompt_verbatim"} | set(required))
+def base(record, required, optional=()):
+    fields(record, {"schema_version", "id", "prompt_verbatim"} | set(required), optional)
     if type(record["schema_version"]) is not int or record["schema_version"] != 1:
         raise ValueError("Unsupported goal record schema")
     identifier(record["id"])
@@ -166,19 +167,29 @@ class GoalLedger:
         reorientation = db.execute(
             "SELECT seq,kind,id,hash,body FROM records WHERE kind IN ('reorientation','rebrainstorm') ORDER BY seq DESC LIMIT 1"
         ).fetchone()
+        recovery = db.execute(
+            "SELECT seq,id,hash,body FROM records WHERE kind='recovery' ORDER BY seq DESC LIMIT 1"
+        ).fetchone()
         goal = db.execute(
             "SELECT seq,id FROM records WHERE kind='goal' ORDER BY seq DESC LIMIT 1"
         ).fetchone()
-        if not checkpoint or (goal and goal["seq"] > checkpoint["seq"]):
-            return {"checkpoint": None, "reorientation": None, "pending": False}
+        if not checkpoint:
+            return {"checkpoint": None, "reorientation": None, "recovery": None, "pending": False}
         cp = {**dict(checkpoint), "body": json.loads(checkpoint["body"])}
+        active_recovery = None
+        if recovery and recovery["seq"] > checkpoint["seq"] and (not goal or recovery["seq"] > goal["seq"]):
+            active_recovery = {**dict(recovery), "body": json.loads(recovery["body"])}
+            if not reorientation or recovery["seq"] > reorientation["seq"]:
+                return {"checkpoint": cp, "reorientation": None, "recovery": active_recovery, "pending": True}
+        if goal and goal["seq"] > checkpoint["seq"] and not active_recovery:
+            return {"checkpoint": None, "reorientation": None, "recovery": None, "pending": False}
         if not reorientation or reorientation["seq"] < checkpoint["seq"]:
-            return {"checkpoint": cp, "reorientation": None, "pending": True}
+            return {"checkpoint": cp, "reorientation": None, "recovery": active_recovery, "pending": True}
         record = {**dict(reorientation), "body": json.loads(reorientation["body"])}
-        return {"checkpoint": cp, "reorientation": record, "pending": False}
+        return {"checkpoint": cp, "reorientation": record, "recovery": active_recovery, "pending": False}
 
     def anchor(self, record):
-        base(record, {"revision", "project_id", "goal", "claims", "non_goals", "allowed_scopes", "budget", "drift_policy"})
+        base(record, {"revision", "project_id", "goal", "claims", "non_goals", "allowed_scopes", "budget", "drift_policy"}, {"recovery_policy"})
         identifier(record["project_id"])
         string(record["goal"], 2000)
         if type(record["revision"]) is not int or record["revision"] < 1:
@@ -206,6 +217,19 @@ class GoalLedger:
             if type(policy[key]) is not int or policy[key] < 1:
                 raise ValueError("Prospective checkpoint count must be positive")
         number(policy["max_diagnostic_seconds"], positive=True)
+        recovery_policy = record.get("recovery_policy")
+        if recovery_policy is not None:
+            fields(recovery_policy, {"auto_fresh_replacement_for_procedural_invalidity",
+                                     "auto_minimum_budget_extension",
+                                     "max_fresh_replacements_per_checkpoint",
+                                     "stop_only_on_scientific_exhaustion"})
+            for key in ("auto_fresh_replacement_for_procedural_invalidity",
+                        "auto_minimum_budget_extension", "stop_only_on_scientific_exhaustion"):
+                if type(recovery_policy[key]) is not bool:
+                    raise ValueError("Recovery policy switches must be boolean")
+            if (type(recovery_policy["max_fresh_replacements_per_checkpoint"]) is not int
+                    or recovery_policy["max_fresh_replacements_per_checkpoint"] < 1):
+                raise ValueError("Recovery replacement limit must be positive")
         with self.connect(write=True) as db:
             old = db.execute("SELECT hash FROM records WHERE kind='goal' AND id=?", (record["id"],)).fetchone()
             if old:
@@ -225,12 +249,74 @@ class GoalLedger:
                 raise Conflict("Initial goal must have revision1")
             return self.put(db, "goal", record)
 
+    def recover(self, record):
+        """Authorize one fresh, minimally budgeted replacement for procedural invalidity.
+
+        This never reopens the failed campaign or permits use of invalid evidence.
+        The project agent supplies the failure classification and correction;
+        the ledger binds them to the exact invalid checkpoint and user policy.
+        """
+        base(record, {"goal_hash", "context_hash", "checkpoint_id", "checkpoint_hash",
+                      "invalidity_kind", "failure_summary", "correction", "evidence",
+                      "replacement_campaign_id", "replacement_proposal_id",
+                      "complete_recovery_seconds", "budget_extension_seconds",
+                      "scientific_scope_unchanged", "next_checkpoint"})
+        for key in ("goal_hash", "context_hash", "checkpoint_hash"):
+            hash_text(record[key])
+        for key in ("checkpoint_id", "replacement_campaign_id", "replacement_proposal_id"):
+            identifier(record[key])
+        if record["invalidity_kind"] != "procedural":
+            raise ValueError("Only procedural invalidity is eligible for automatic recovery")
+        for key in ("failure_summary", "correction", "next_checkpoint"):
+            string(record[key], 3000)
+        evidence(record["evidence"])
+        number(record["complete_recovery_seconds"], positive=True)
+        number(record["budget_extension_seconds"])
+        if record["scientific_scope_unchanged"] is not True:
+            raise ValueError("Procedural recovery cannot change scientific scope")
+        with self.connect(write=True) as db:
+            old = db.execute("SELECT 1 FROM records WHERE kind='recovery' AND id=?", (record["id"],)).fetchone()
+            if old:
+                return self.put(db, "recovery", record)
+            context = self.context(db)
+            if context["goal_hash"] != record["goal_hash"] or context["context_hash"] != record["context_hash"]:
+                raise Conflict("Procedural recovery context is stale")
+            if context["stopped"] or context["active_campaigns"]:
+                raise Conflict("Explicit stop or active campaign blocks procedural recovery")
+            policy = context["goal"].get("recovery_policy") or {}
+            if not (policy.get("auto_fresh_replacement_for_procedural_invalidity")
+                    and policy.get("auto_minimum_budget_extension")
+                    and policy.get("stop_only_on_scientific_exhaustion")):
+                raise Conflict("Goal policy does not authorize automatic procedural recovery")
+            row = db.execute("SELECT id,hash,body FROM records WHERE kind='checkpoint' ORDER BY seq DESC LIMIT 1").fetchone()
+            if not row or row["id"] != record["checkpoint_id"] or row["hash"] != record["checkpoint_hash"]:
+                raise Conflict("Recovery does not bind the latest checkpoint")
+            checkpoint = json.loads(row["body"])
+            if checkpoint["outcome"] != "invalid":
+                raise Conflict("Scientific outcomes are not procedural recovery candidates")
+            if record["replacement_campaign_id"] == checkpoint["campaign_id"]:
+                raise Conflict("Procedural recovery requires a fresh campaign identity")
+            if db.execute("SELECT 1 FROM admissions WHERE campaign=?", (record["replacement_campaign_id"],)).fetchone():
+                raise Conflict("Replacement campaign identity is already used")
+            count = 0
+            for item in db.execute("SELECT body FROM records WHERE kind='recovery'"):
+                if json.loads(item["body"])["checkpoint_id"] == checkpoint["id"]:
+                    count += 1
+            if count >= policy["max_fresh_replacements_per_checkpoint"]:
+                raise Conflict("Procedural replacement limit reached for checkpoint")
+            shortfall = max(0, record["complete_recovery_seconds"] - context["accounting"]["remaining_seconds"])
+            if abs(record["budget_extension_seconds"] - shortfall) > 1e-9:
+                raise Conflict("Procedural budget extension must equal the minimum complete-route shortfall")
+            return self.put(db, "recovery", record)
+
     def context(self, db):
         goal_row, goal = self.latest_goal(db)
         admissions = [dict(r) for r in db.execute("SELECT * FROM admissions ORDER BY created,campaign")]
         rows = [dict(r) for r in db.execute("SELECT seq,kind,id,hash FROM records ORDER BY seq")]
         # Assessment/proposal authoring does not itself change research context.
-        events = [r for r in rows if r["kind"] in {"goal", "control", "checkpoint", "reorientation", "rebrainstorm"}]
+        events = [r for r in rows if r["kind"] in {"goal", "control", "checkpoint", "reorientation", "rebrainstorm", "recovery"}]
+        recoveries = [json.loads(r[0]) for r in db.execute("SELECT body FROM records WHERE kind='recovery' ORDER BY seq")]
+        recovery_extension = sum(item["budget_extension_seconds"] for item in recoveries)
         spent = goal["budget"]["imported_seconds"] + sum(a["charged"] for a in admissions)
         reserved = sum(a["reserved"] for a in admissions if a["state"] == "active")
         checkpoints = []
@@ -275,15 +361,21 @@ class GoalLedger:
             else:
                 prefix = "awaiting_context_change:"
             triggers.append(prefix + record["id"])
+        if path.get("recovery"):
+            triggers.append("procedural_recovery:" + path["recovery"]["id"])
+        effective_max = goal["budget"]["max_seconds"] + recovery_extension
         result = {"goal_hash": goal_row["hash"], "goal": goal, "events": events,
                   "accounting": {"spent_seconds": spent, "reserved_seconds": reserved,
-                    "max_seconds": goal["budget"]["max_seconds"],
-                    "remaining_seconds": goal["budget"]["max_seconds"] - spent - reserved},
+                    "base_max_seconds": goal["budget"]["max_seconds"],
+                    "recovery_extension_seconds": recovery_extension,
+                    "max_seconds": effective_max,
+                    "remaining_seconds": effective_max - spent - reserved},
                   "active_campaigns": [a["campaign"] for a in admissions if a["state"] == "active"],
                   "triggers": sorted(set(triggers)), "stopped": stopped,
                   "diagnostic_campaigns": len(diagnostics), "unchanged_checkpoints": unchanged,
                   "admissions": admissions}
         result["reorientation"] = path["reorientation"]["body"] if path["reorientation"] else None
+        result["recovery"] = path["recovery"]["body"] if path.get("recovery") else None
         result["reorientation_checkpoint"] = (
             {key: path["checkpoint"][key] for key in ("id", "hash")} if path["checkpoint"] else None
         )
@@ -362,6 +454,12 @@ class GoalLedger:
                     raise Conflict("Viable candidate exceeds current goal claim/scope")
                 if sum(candidate["budget"].values()) > context["accounting"]["remaining_seconds"]:
                     raise Conflict("Viable candidate complete route exceeds aggregate remainder")
+            recovery = context.get("recovery")
+            if recovery and viable:
+                candidate = viable[selected]
+                if (candidate["proposal_id"] != recovery["replacement_proposal_id"]
+                        or abs(sum(candidate["budget"].values()) - recovery["complete_recovery_seconds"]) > 1e-9):
+                    raise Conflict("Selected candidate differs from authorized procedural recovery")
             return self.put(db, "reorientation", record)
 
     def rebrainstorm(self, record):
@@ -431,6 +529,12 @@ class GoalLedger:
             for candidate in viable.values():
                 if candidate["parent_claim"] not in claims or candidate["scope"] not in goal["allowed_scopes"]:raise Conflict("Viable candidate exceeds current goal claim/scope")
                 if sum(candidate["budget"].values())>context["accounting"]["remaining_seconds"]:raise Conflict("Viable candidate complete route exceeds aggregate remainder")
+            recovery=context.get("recovery")
+            if recovery and viable:
+                candidate=viable[selected]
+                if (candidate["proposal_id"]!=recovery["replacement_proposal_id"]
+                        or abs(sum(candidate["budget"].values())-recovery["complete_recovery_seconds"])>1e-9):
+                    raise Conflict("Selected candidate differs from authorized procedural recovery")
             return self.put(db,"rebrainstorm",record)
 
     def proposal(self, record):
@@ -481,6 +585,12 @@ class GoalLedger:
                             raise Conflict("Proposal differs from selected reorientation candidate")
                     if record["budget"] != selected["budget"]:
                         raise Conflict("Proposal budget differs from selected reorientation candidate")
+                    if path.get("recovery"):
+                        recovery = path["recovery"]["body"]
+                        if (record["id"] != recovery["replacement_proposal_id"]
+                                or record["campaign_id"] != recovery["replacement_campaign_id"]
+                                or abs(sum(record["budget"].values()) - recovery["complete_recovery_seconds"]) > 1e-9):
+                            raise Conflict("Proposal differs from authorized procedural recovery")
             return self.put(db, "proposal", record)
 
     def control(self, record):
@@ -671,6 +781,7 @@ class GoalLedger:
             "Explicit stop; requires resume and fresh assessment" if context["stopped"] else
             "Admitted design may finish; next campaign requires fresh assessment" if context["active_campaigns"] else
             "Exact proposal has a fresh goal assessment; dispatch still checks all bindings and gates" if ready else
+            "Procedural recovery is authorized and minimally budgeted; publish its fresh replacement candidate inventory" if pending and context.get("recovery") else
             "Terminal campaign checkpoint requires an evidence-backed outer-loop candidate inventory" if pending else
             "No viable candidate in the current slate; publish a context-changing rebrainstorm" if path and path["selected_candidate"] is None and any(t.startswith("rebrainstorm_required:") for t in context["triggers"]) else
             path["no_viable_reason"] if path and path["selected_candidate"] is None else
