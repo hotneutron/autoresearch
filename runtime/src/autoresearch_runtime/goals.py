@@ -6,6 +6,7 @@ Revision History: 2026-10-12 — initial goal/proposal/assessment/admission ledg
 2026-10-13 — require outer-loop reorientation after a terminal campaign checkpoint.
 2026-10-13 — require context-changing rebrainstorm after a no-viable inventory.
 2026-10-13 — authorize bounded fresh recovery from procedural invalidity.
+2026-10-13 — preserve recovery extensions across later goal revisions.
 """
 from __future__ import annotations
 
@@ -243,7 +244,10 @@ class GoalLedger:
                     if budget[key] != goal["budget"][key]:
                         raise Conflict("Historical charges cannot be reset or reimported")
                 accounts = self.context(db)["accounting"]
-                if budget["max_seconds"] < accounts["spent_seconds"] + accounts["reserved_seconds"]:
+                effective_new_max = (
+                    budget["max_seconds"] + accounts["recovery_extension_seconds"]
+                )
+                if effective_new_max < accounts["spent_seconds"] + accounts["reserved_seconds"]:
                     raise Conflict("New cap cannot erase committed charges/reservations")
             elif record["revision"] != 1:
                 raise Conflict("Initial goal must have revision1")

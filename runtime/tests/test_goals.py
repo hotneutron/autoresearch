@@ -2,6 +2,7 @@
 Revision History: 2026-10-12 — initial portable-project behavioral tests.
 2026-10-13 — outer-loop reorientation and selected-candidate binding.
 2026-10-13 — bounded fresh recovery from procedural invalidity.
+2026-10-13 — goal revisions preserve prior recovery extensions exactly once.
 """
 import copy
 import json
@@ -122,6 +123,25 @@ class GoalTests(unittest.TestCase):
         g=copy.deepcopy(self.goal);g.update(id='goal-r2',revision=2);g['budget']['max_seconds']=120
         self.ledger.anchor(g)
         self.assertEqual(self.ledger.snapshot()['accounting']['spent_seconds'],10)
+
+    def test_goal_revision_preserves_recovery_extension_without_double_counting(self):
+        with self.ledger.connect(write=True) as db:
+            db.execute(
+                "INSERT INTO admissions(campaign,directory,proposal,assessment,goal,contract_hash,reserved,charged,state,created) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                ('historical',str(self.root/'historical'),'0'*64,'1'*64,self.goal_receipt['hash'],'2'*64,0,95,'closed','2026-10-13T00:00:00Z'),
+            )
+            self.ledger.put(db,'recovery',{'id':'historical-recovery','budget_extension_seconds':5})
+        before=self.ledger.snapshot()['accounting']
+        self.assertEqual(before['spent_seconds'],105)
+        self.assertEqual(before['max_seconds'],105)
+        goal=copy.deepcopy(self.goal);goal.update(id='goal-r2',revision=2,goal='Combine operation and shape.')
+        self.ledger.anchor(goal)
+        after=self.ledger.snapshot()['accounting']
+        self.assertEqual(after['max_seconds'],105)
+        self.assertEqual(after['recovery_extension_seconds'],5)
+        smaller=copy.deepcopy(goal);smaller.update(id='goal-r3',revision=3);smaller['budget']['max_seconds']=99
+        with self.assertRaisesRegex(Conflict,'reservations'):
+            self.ledger.anchor(smaller)
 
     def test_proposal_schema_scope_complete_outcomes_and_finite_cost(self):
         p=self.proposal(self.config())
