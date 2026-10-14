@@ -70,6 +70,7 @@ for(const text of ['Related efforts:','E1 · Smaller images','data-effort="encod
 assert.ok(narrativeDetail.indexOf('Compression may help transfer')<narrativeDetail.indexOf('Technical detail'));
 assert.ok(narrativeDetail.includes('&lt;img'));assert.ok(!narrativeDetail.includes('<img src=x'));
 assert.ok(narrativeDetail.includes('<details open><summary>3-minute evidence review'));
+assert.ok(narrativeDetail.indexOf('3-minute evidence review')<narrativeDetail.indexOf('What we tried, why, and what we learned'));
 vm.runInContext("setLocale('zh-CN')",context);
 assert.ok(node('detail').innerHTML.includes('三分钟证据解读'));
 assert.ok(node('detail').innerHTML.includes('画质未知'));
