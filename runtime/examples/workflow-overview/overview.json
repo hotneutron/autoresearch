@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "revision": 1,
+  "summary": "Illustrative example: smaller photographs could upload faster, but quality has not been established. No deployment is authorized.",
+  "prompt_verbatim": "Show a newcomer what we tried, why we tried it, what we learned and what should happen next.",
+  "sources": [{"label": "Illustrative released report (not actual research)", "path": "evidence.json"}],
+  "narrative": {
+    "schema_version": 1,
+    "changes": [{"id": "planned-comparison", "title": "From a size idea to a testable speed-and-quality question", "before": "Large photos take longer to send, but changing the encoder has not been tested.", "after": "The proposed comparison keeps the photographs fixed and checks speed and visual detail separately; no experiment has run.", "why_it_matters": "The next decision needs both transfer and quality evidence, not simply a smaller-file example.", "evidence": [0]}],
+    "limitations": [{"id": "unseen-quality", "question": "Will smaller files preserve detail on new photographs?", "why_unanswered": "The attached numbers illustrate report formatting, not measured speed or quality.", "goal_impact": "A faster upload would not meet the goal if photographs lost visible detail.", "next_evidence": "A separately approved complete comparison on held-out photos with a fixed quality assessment.", "evidence": [0]}],
+    "insights": [{"id": "illustration-not-result", "title": "Why the example is not a product result", "comparison": "The intended study compares two encoders on identical public photographs under fixed upload settings.", "support": "Zero measured photographs: the attached report is explicitly illustrative.", "finding": "No speed or visual-quality outcome has been collected.", "interpretation": "The example demonstrates how to explain a study, not that an encoder improves the product.", "goal_relevance": "Prepare a quality-and-speed decision before deployment instead of optimizing file size alone.", "caveat": "No claim about unseen photographs or production upload performance is supported.", "evidence": [0]}]
+  },
+  "workflow": {
+    "kind": "overview",
+    "project_id": "image-upload-example",
+    "project_name": "Faster photograph uploads",
+    "goal": "Upload photographs faster without losing visible detail.",
+    "background": "Large image files take longer to send. This example explains how a research team could compare smaller image encodings before changing the product. Its numbers are illustrative, not measured evidence.",
+    "success_criteria": ["Smaller files shorten upload time.", "Independent image-quality checks must pass before any deployment."],
+    "status": "planned",
+    "current_question": "Can a different image encoding reduce file size without reducing quality?",
+    "next_checkpoint": "Collect a complete speed and quality comparison under a separately approved experiment contract.",
+    "updated_at": "2026-10-12T12:00:00+00:00",
+    "glossary": [
+      {"term": "codec", "meaning": "A method used to encode or compress an image."},
+      {"term": "speedup", "meaning": "Old transfer time divided by new transfer time; 1.2 would mean 20% more work per unit time, not proven here."}
+    ],
+    "efforts": [{
+      "id": "smaller-files",
+      "title": "Explore a more compact image encoding",
+      "status": "planned",
+      "question": "Would smaller files reduce transfer time?",
+      "motivation": "File size is a direct, controllable input to transfer time.",
+      "approach": "Compare two encoders on identical public photographs; check speed and image quality separately.",
+      "alternatives": [{"option": "Buy more network bandwidth", "reason": "It changes infrastructure and would not isolate the encoding effect."}],
+      "outcome": "No experiment has been run. The attached illustrative report only demonstrates the review format.",
+      "decision": "Do not deploy; prepare a complete comparison first.",
+      "rationale": "A smaller file is useful only if it preserves acceptable image quality.",
+      "uncertainty": "Quality of unseen photographs is untested, and the illustrative speedup is not a measurement.",
+      "next_step": "Freeze the image selection, quality verifier and complete-unit experiment budget.",
+      "evidence": [0]
+    }],
+    "feedback_dispositions": []
+  }
+}
