@@ -1,0 +1,4 @@
+- Every rule here must have a justification entry in `.agent/rules-rationale.md` (which doubles as this file's revision history).
+- Persist user prompts verbatim in artifacts.
+- Any amendment to an existing artifact must add/update timestamped `## Revision History`.
+- No `Co-Authored-By` trailer.
