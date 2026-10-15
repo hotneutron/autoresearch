@@ -4,7 +4,15 @@ import re
 
 from .review import identifier, string
 
-STATUSES = {"planned", "running", "completed", "blocked", "deferred", "stopped"}
+STATUSES = {
+    "planned",
+    "running",
+    "completed",
+    "blocked",
+    "deferred",
+    "stopped",
+    "awaiting_context_change",
+}
 WORKFLOW_FIELDS = {"kind", "project_id", "project_name", "goal", "background", "success_criteria",
                    "status", "current_question", "next_checkpoint", "updated_at", "glossary", "efforts",
                    "feedback_dispositions"}

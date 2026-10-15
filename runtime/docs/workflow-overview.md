@@ -32,7 +32,7 @@ the same generic structure and strictly display-only Chinese overlays.
 ## What a newcomer sees
 
 1. **Start here:** human-readable project name, goal, short background and plain-language success criteria.
-2. **Where we are:** explicit planned/running/completed/blocked/deferred/stopped state, current question, next checkpoint, author-reported timestamp and publication time. This is a snapshot, not inferred job liveness.
+2. **Where we are:** explicit planned/running/completed/blocked/deferred/stopped/awaiting-context-change state, current question, next checkpoint, author-reported timestamp and publication time. `awaiting_context_change` means the current candidate slate is scientifically exhausted and names the evidence, architecture, authority or infrastructure change required before proposing another campaign; it is distinct from an operational block. This is a snapshot, not inferred job liveness.
 3. **Glossary:** domain terms explained without assuming project expertise. Metrics still include units, observation counts and acceptance rules.
 4. **What we tried, why and what we learned:** each effort's question, motivation, approach, alternatives and why they were not chosen, outcome, decision, concise rationale, uncertainty and next step. A completed but negative or inconclusive study is not mislabeled as a program failure.
 5. **Evidence:** selected immutable text snapshots, one click away. Valid evidence is not automatic scientific qualification, deployment permission or a model-success claim.

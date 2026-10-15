@@ -105,6 +105,8 @@
   "In progress": "进行中",
   "Complete": "已完成",
   "Blocked": "受阻",
+  "Awaiting context change": "等待上下文变化",
+  "awaiting_context_change": "等待上下文变化",
   "Deferred · not running": "已暂缓 · 未运行",
   "Stopped": "已停止",
   "valid": "有效",

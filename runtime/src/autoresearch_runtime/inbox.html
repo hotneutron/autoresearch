@@ -39,7 +39,7 @@ const date = value => new Date(value).toLocaleString(locale==='zh-CN'?'zh-CN':'e
 const waiting = packet => packet.actions.some(a=>a.state==='waiting');
 const notify = value => {$('notice').textContent=t(value);};
 const isOverview = packet => packet.workflow?.kind==='overview';
-const statusLabel = value => t(({planned:'Planned · not started',running:'In progress',completed:'Complete',blocked:'Blocked',deferred:'Deferred · not running',stopped:'Stopped'}[value]||value));
+const statusLabel = value => t(({planned:'Planned · not started',running:'In progress',completed:'Complete',blocked:'Blocked',deferred:'Deferred · not running',stopped:'Stopped',awaiting_context_change:'Awaiting context change'}[value]||value));
 const sourceButtons = indices => indices.map(i=>`<button class="source" data-source="${i}">${h('Evidence')} ${i+1}</button>`).join(' · ');
 const effortLabel = (p,id) => {const index=p.workflow?.efforts.findIndex(e=>e.id===id)??-1;return index<0?null:{index,label:`E${index+1}`,title:p.workflow.efforts[index].title,id};};
 const relatedEfforts = (p,ids) => {const values=(ids||[]).map(id=>effortLabel(p,id)).filter(Boolean);return values.length?`<p><strong>${h('Related efforts:')}</strong> ${values.map(v=>`<button class="effort-ref" data-effort="${escape(v.id)}">${escape(v.label)} · ${escape(v.title)}</button>`).join(' · ')}</p>`:'';};

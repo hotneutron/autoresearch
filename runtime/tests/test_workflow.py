@@ -63,6 +63,14 @@ class WorkflowTests(unittest.TestCase):
         changed['revision']=2;self.publish(changed);self.assertEqual(self.inbox.snapshot()['packets'][0]['previous']['id'],receipt['id'])
         (self.repo/'evidence.json').unlink();self.assertIn('speedup',self.inbox.evidence(receipt['id'],0))
 
+    def test_awaiting_context_change_is_a_first_class_status(self):
+        doc=document();doc['workflow']['status']='awaiting_context_change'
+        doc['workflow']['current_question']='Which external evidence or architecture change can reopen the goal?'
+        doc['workflow']['next_checkpoint']='Wait for one named context change; do not retry the exhausted slate.'
+        self.publish(doc)
+        packet=self.inbox.snapshot()['packets'][0]
+        self.assertEqual(packet['workflow']['status'],'awaiting_context_change')
+
     def test_overview_cannot_approve_pause_or_dispatch(self):
         self.inbox.publish(self.study());self.publish();packets=self.inbox.snapshot()['packets'];p=next(x for x in packets if 'workflow' in x)
         for kind in ('pause','resume','approve','reject'):
