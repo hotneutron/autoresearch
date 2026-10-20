@@ -21,6 +21,24 @@ human branch pause. Stop the controller with Ctrl-C; detached experimental units
 keep running to their bounded timeout and retain resource leases. Reopen with the
 same installed runtime and store to reconcile their receipts.
 
+## Live review freshness · 0.5.7
+
+A polling inbox and an authored scientific report have different lifetimes.
+[Live review freshness](docs/live-review-freshness.md) adds a trusted read-only
+execution observation alongside immutable reports: worker liveness, elapsed time,
+known durable progress and an explicit final-result-pending boundary. The browser
+shows its last successful refresh and follows the newest revision of the selected
+branch without reusing feedback drafts or approvals. Project review-only
+publishers can emit narrative revisions at meaningful stage/checkpoint changes;
+heartbeats do not need new evidence revisions. Historical scientific pins, store
+schemas, admission rules and verifier checks are unchanged.
+
+[Report execution scope](docs/report-execution-scope.md) separates a selected
+experiment's exact-bound lifecycle from overall research activity.
+[Identity numbering](docs/report-identity-numbering.md) explains effort indices,
+report revisions and actual experiment IDs; an umbrella effort may span several
+bounded experiments without changing its E-number.
+
 ## Goal-linked steering and outer-loop reorientation · 0.5.0
 
 Optional persistent goal steering binds new campaigns to the original goal,
@@ -267,3 +285,5 @@ fix the issue then continue.
 | r9 | 2026-10-13 00:00 -0700 | Documented0.5.0 mandatory terminal-checkpoint reorientation, selected-candidate proposal binding, explicit no-viable state and public bilingual candidate display; preserved both exact requests. |
 | r10 | 2026-10-13 00:00 -0700 | Documented0.5.1 validated narrative-to-effort references and clickable E-index rendering in both overview context sections; preserved exact request and legacy compatibility. |
 | r11 | 2026-10-13 00:00 -0700 | Documented0.5.2 context-changing rebrainstorm after no-viable slates, selected-candidate continuation and explicit awaiting-context unblock conditions. |
+| r12 | 2026-10-20 | Documented0.5.7 read-only live observation/freshness and same-branch revision following, separate from immutable evidence and scientific authority; exact request in live-review-freshness.md. |
+| r13 | 2026-10-20T23:44:00+00:00 | Linked exact report/global execution scope and E-index/reportrevision/experimentidentity guides; prepared focused review-source commit under exact user request in docs/20261020-commit-review-changes.md, no scientific runtime change. |
