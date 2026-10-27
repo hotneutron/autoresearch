@@ -4,7 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "autoresearch-runtime"
-version = "0.5.6"
+# ## Revision History
+# - 2026-10-20: Review-only live status and refresh release; scientific
+#   protocol/store versions unchanged.
+# - 2026-10-21T03:15:00Z: Review-only immutable report navigation and complete
+#   experiment timeline; scientific protocol/store versions unchanged.
+version = "0.5.8"
 description = "Durable research execution and asynchronous review inbox"
 requires-python = ">=3.11"
 dependencies = []

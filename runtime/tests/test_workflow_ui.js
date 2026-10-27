@@ -54,18 +54,22 @@ node('comment').value='请保留所有失败样本';node('comment').oninput();
 vm.runInContext("setLocale('en')",context);assert.equal(node('comment').value,'请保留所有失败样本');assert.ok(node('detail').innerHTML.includes('Start here · Faster photographs'));
 context.fixture.goal_steering={state:'candidate_selected',reason:'Outer loop selected a candidate',goal:{goal:'Predict <unseen> workloads'},accounting:{spent_seconds:10,reserved_seconds:0,max_seconds:20},triggers:['reorientation:reorient-1'],reorientation:{id:'reorient-1',unresolved_claim:'Predict unseen workloads',exhausted_path:'Repeated timing diagnostics <failed>',selected_candidate:'new-label-source',no_viable_reason:null,next_checkpoint:'Publish the exact proposal.',candidates:[{id:'new-label-source',status:'viable',decision:'Test independent labels',novelty:'Uses another source',reason:'Direct endpoint evidence',budget:{campaign_seconds:4,downstream_seconds:6}}]}};
 vm.runInContext("detailSignature='';render()",context);
-assert.ok(node('detail').innerHTML.includes('Goal-level steering'));
-assert.ok(node('detail').innerHTML.includes('Predict &lt;unseen&gt; workloads'));
-assert.ok(node('detail').innerHTML.includes('10 / 0 / 20'));
-assert.ok(node('detail').innerHTML.includes('Outer-loop reorientation'));
-assert.ok(node('detail').innerHTML.includes('new-label-source'));
-assert.ok(node('detail').innerHTML.includes('Repeated timing diagnostics &lt;failed&gt;'));
-assert.ok(node('detail').innerHTML.includes('not private chain-of-thought'));
+// ## Revision History — 2026-10-20T21:38:00Z: Global steering now lives outside
+// the selected report; its existing escaped reorientation content is unchanged.
+// Prompt verbatim: why the status for finished experiments are still "当前状态： 已有活动正在执行" for review dashboard?
+assert.ok(node('goal-steering').innerHTML.includes('Goal-level steering'));
+assert.ok(node('goal-steering').innerHTML.includes('Predict &lt;unseen&gt; workloads'));
+assert.ok(node('goal-steering').innerHTML.includes('10 / 0 / 20'));
+assert.ok(node('goal-steering').innerHTML.includes('Outer-loop reorientation'));
+assert.ok(node('goal-steering').innerHTML.includes('new-label-source'));
+assert.ok(node('goal-steering').innerHTML.includes('Repeated timing diagnostics &lt;failed&gt;'));
+assert.ok(!node('detail').innerHTML.includes('Goal-level steering'));
+assert.ok(node('goal-steering').innerHTML.includes('not private chain-of-thought'));
 vm.runInContext("setLocale('zh-CN')",context);
-assert.ok(node('detail').innerHTML.includes('目标级纠偏'));
-assert.ok(node('detail').innerHTML.includes('外层循环重新定向'));
-assert.ok(node('detail').innerHTML.includes('已选择新的候选路径'));
-assert.ok(node('detail').innerHTML.includes('不能覆盖科学门槛'));
+assert.ok(node('goal-steering').innerHTML.includes('目标级纠偏'));
+assert.ok(node('goal-steering').innerHTML.includes('外层循环重新定向'));
+assert.ok(node('goal-steering').innerHTML.includes('已选择新的候选路径'));
+assert.ok(node('goal-steering').innerHTML.includes('不能覆盖科学门槛'));
 overview.narrative={schema_version:1,changes:[{id:'size',title:'Compare file size',before:'Original files were large.',after:'Files are smaller.',why_it_matters:'Evaluate quality next.',evidence:[0],efforts:['encoder']}],limitations:[{id:'quality',question:'Is quality preserved?',why_unanswered:'No visual evaluation.',goal_impact:'Speed is not enough.',next_evidence:'Unseen-photo quality test.',evidence:[0],efforts:['encoder']}],insights:[{id:'finding',title:'Size is not quality',comparison:'Same photos, different encoder.',support:'One illustrative panel.',finding:'<img src=x onerror=alert(1)>',interpretation:'Compression may help transfer, quality unknown.',goal_relevance:'Measure quality next.',caveat:'Not tested on unseen photos.',evidence:[0]}]};
 overview.translations['zh-CN'].narrative={insights:[{id:'finding',title:'文件大小不等于画面质量',interpretation:'压缩可能改善传输，但画质未知。'}]};
 context.fixture.packets[1]=overview;
