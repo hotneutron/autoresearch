@@ -21,6 +21,18 @@ human branch pause. Stop the controller with Ctrl-C; detached experimental units
 keep running to their bounded timeout and retain resource leases. Reopen with the
 same installed runtime and store to reconcile their receipts.
 
+## Complete review history · 0.5.8
+
+[Complete review history](docs/review-history.md) adds two deliberately separate
+read-only views. Reports and revisions pages through every immutable stored
+report in a series, retrieves an exact revision by ID, and keeps historical
+reports pinned while live progress refreshes. Experiment history and progress
+lists every GoalLedger admission—including invalid executions and recoveries—
+with exact costs, checkpoints, evidence hashes, verified process liveness, final
+metrics when emitted, and links back to related report revisions. Historical
+reports cannot accept feedback or run actions. The new views do not change the
+scientific protocol, stored packets, GoalLedger, admission, or execution state.
+
 ## Live review freshness · 0.5.7
 
 A polling inbox and an authored scientific report have different lifetimes.
@@ -287,3 +299,4 @@ fix the issue then continue.
 | r11 | 2026-10-13 00:00 -0700 | Documented0.5.2 context-changing rebrainstorm after no-viable slates, selected-candidate continuation and explicit awaiting-context unblock conditions. |
 | r12 | 2026-10-20 | Documented0.5.7 read-only live observation/freshness and same-branch revision following, separate from immutable evidence and scientific authority; exact request in live-review-freshness.md. |
 | r13 | 2026-10-20T23:44:00+00:00 | Linked exact report/global execution scope and E-index/reportrevision/experimentidentity guides; prepared focused review-source commit under exact user request in docs/20261020-commit-review-changes.md, no scientific runtime change. |
+| r14 | 2026-10-21T03:15:00+00:00 | Documented0.5.8 paginated immutable report history and complete read-only experiment timeline under the exact dashboard visibility request in docs/review-history.md; scientific protocol/store versions unchanged. |

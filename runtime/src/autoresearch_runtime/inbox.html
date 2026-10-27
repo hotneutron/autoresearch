@@ -17,7 +17,9 @@
 <section id="live-status" class="box" style="margin:16px 5vw" aria-live="polite" hidden></section>
 <section id="goal-steering" style="margin:16px 5vw" aria-label="Overall research steering" hidden></section>
 <details style="margin:0 5vw;padding:12px 0"><summary data-i18n>New here? How to read results and steer</summary><p data-i18n>Start here explains the project's goal and why each effort was tried. A study report gives its result and the evidence used to make a decision.</p><p data-i18n>Evidence validity means the stated checks passed; it is not proof of the hypothesis or permission to deploy. Diagnostic means useful but limited evidence. A failed result can still teach us what to try next.</p><p data-i18n>Comment suggests a direction. Approve authorizes only a named eligible study action at this exact report revision. Pause takes effect on that study at its next safe complete-unit checkpoint. It does not terminate a running experiment mid-unit. Overview comments never grant these permissions.</p><p data-i18n>Glossaries explain domain terms. Metrics state units, number of observations and acceptance rules. Expand Source reports for immutable evidence; publication times tell you how fresh the summary is.</p><p class="small" data-i18n>Source evidence and feedback remain in their original language; translations change presentation only.</p></details>
-<main class="layout"><nav class="list" id="list" aria-label="Experiment reports"></nav><article class="report" id="detail"></article></main>
+<div class="toolbar" aria-label="Dashboard views"><button id="reports-view" class="primary" data-i18n>Reports and revisions</button><button id="experiments-view" class="secondary" data-i18n>Experiment history and progress</button></div>
+<section id="experiment-history" class="report" style="margin:20px 5vw" hidden><h2 data-i18n>Experiment history and progress</h2><p data-i18n>One entry per actual experiment, including failures and recoveries. Report revisions are available separately.</p><div class="toolbar"><input id="experiment-search" type="search" placeholder="Search experiment IDs or questions"><select id="experiment-filter"><option value="all" data-i18n>All experiments</option><option value="running" data-i18n>Running</option><option value="finished" data-i18n>Finished</option><option value="invalid" data-i18n>Invalid execution</option></select><button id="experiment-refresh" class="secondary" data-i18n>Refresh now</button></div><p id="experiment-count"></p><div id="experiment-list"></div><button id="experiment-more" class="secondary" data-i18n>Load older experiments</button><article id="experiment-detail"></article></section>
+<main class="layout" id="reports-layout"><nav class="list" id="list" aria-label="Experiment reports"></nav><section><section id="report-history" class="box"><h3 data-i18n>Report revision history</h3><p data-i18n>Choose a series and any stored revision. Historical reports stay pinned while live progress continues.</p><select id="history-series" aria-label="Report series"></select><button id="history-first" class="secondary" data-i18n>First revision</button><button id="history-older" class="secondary" data-i18n>Older revision</button><button id="history-newer" class="secondary" data-i18n>Newer revision</button><button id="history-latest" class="secondary" data-i18n>Latest revision</button><select id="history-revision" aria-label="Report revision"></select><button id="history-more" class="secondary" data-i18n>Load older revisions</button><p id="history-count" class="small"></p></section><article class="report" id="detail"></article></section></main>
 <dialog id="evidence" aria-labelledby="evidence-title"><div class="topline"><strong id="evidence-title"></strong><div><button class="secondary" id="evidence-toggle" hidden>View raw source</button> <button class="secondary" id="close-evidence" data-i18n>Close</button></div></div><p id="evidence-format" class="small"></p><div id="evidence-rendered" class="markdown-body" hidden></div><pre id="evidence-body"></pre></dialog>
 <footer id="footer"></footer>
 <script>
@@ -38,6 +40,12 @@ let selected = location.hash.slice(1) || null, selectedBranch = null, token = nu
 let lastRefreshAt = null, refreshError = null;
 let evidenceState=null,evidenceRequest=0;
 const drafts = new Map();
+// ## Revision History — 2026-10-21T01:31:00Z: Complete report catalogs and
+// per-experiment history; pinned archived reports never acquire live permissions.
+let archivePacket=null,archiveFeedback=[],pinRevision=false,historyBranch=null,historyOwnerBranch=null,historyPage=null,historyItems=[],historyRequest=0,reportRequest=0;
+let dashboardView='reports',experimentPage=null,experimentItems=[],experimentSelected=null,experimentDetail=null,experimentRequest=0,experimentDetailRequest=0,experimentError=null;
+const reportById = id => data?.packets.find(p=>p.id===id)|| (archivePacket?.id===id?archivePacket:null);
+const chooseReport = id => {reportRequest++;archivePacket=null;archiveFeedback=[];pinRevision=false;selected=id;detailSignature='';render();};
 const $ = id => document.getElementById(id);
 const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let locale='en';
@@ -47,7 +55,7 @@ const t = (key, values={}) => {let text=locale==='zh-CN'?(ZH_CN[key]||key):key;f
 const h = key => escape(t(key));
 const badge = (label, kind='') => `<span class="badge ${escape(kind)}">${escape(label)}</span>`;
 const bullets = values => `<ul>${values.map(v=>`<li>${escape(v)}</li>`).join('')}</ul>`;
-const date = value => new Date(value).toLocaleString(locale==='zh-CN'?'zh-CN':'en');
+const date = value => value?new Date(value).toLocaleString(locale==='zh-CN'?'zh-CN':'en'):t('Unknown');
 const waiting = packet => packet.actions.some(a=>a.state==='waiting');
 const notify = value => {$('notice').textContent=t(value);};
 const isOverview = packet => packet.workflow?.kind==='overview';
@@ -85,7 +93,7 @@ function updateLanguage(){
   $('search').placeholder=t('Find a study, branch or result');$('search').setAttribute('aria-label',t('Search reports'));$('filter').setAttribute('aria-label',t('Filter reports'));
   document.title=t('Research review inbox');
 }
-function setLocale(value){locale=value==='zh-CN'?'zh-CN':'en';try{localStorage.setItem('autoresearch-review-language',locale);const url=new URL(location.href);url.searchParams.set('lang',locale);history.replaceState(null,'',url);}catch{}detailSignature='';updateLanguage();render();if(evidenceState)renderEvidence();}
+function setLocale(value){locale=value==='zh-CN'?'zh-CN':'en';try{localStorage.setItem('autoresearch-review-language',locale);const url=new URL(location.href);url.searchParams.set('lang',locale);history.replaceState(null,'',url);}catch{}detailSignature='';updateLanguage();render();renderExperiments();if(evidenceState)renderEvidence();}
 function reorientationView(r){
   if(!r)return '';
   const selected=r.selected_candidate||h('No viable candidate');
@@ -101,6 +109,7 @@ function goalSteeringView(){
 }
 function reportExecutionState(p){
   if(isOverview(p))return null;
+  if(p.archive_read_only)return {state:'unlinked',reason:'Execution state is shown in experiment history; this is an immutable historical report.'};
   // Only exact registered identities bind execution; never infer it from prose,
   // evidence validity, a substring, publication time or another active campaign.
   const admissions=(data?.goal_steering?.admissions||[]).filter(a=>a.campaign===p.contract_id||a.campaign===p.branch);
@@ -146,7 +155,7 @@ function renderList(){
   $('ready').textContent=t('{count} next actions can continue',{count:packets.reduce((n,p)=>n+p.actions.filter(a=>a.runnable).length,0)});
   const shown=packets.filter(p=>(!query || searchable(p).includes(query)) && (filter!=='overview'||isOverview(p)) && (filter!=='decision'||waiting(p)) && (filter!=='unread'||!p.acknowledged));
   $('list').innerHTML=shown.map(raw=>{const p=viewPacket(raw);return `<button class="card ${p.id===selected?'selected':''}" data-packet="${escape(p.id)}">${!p.acknowledged?`<span class="unread">${h('NEW')}</span>`:''}${badge(t(isOverview(p)?'Start here · overview':waiting(p)?'Decision needed':p.review_mode==='advice'?'Advice welcome':'For your information'),waiting(p)?'waiting':'ready')}<h3>${escape(p.title)}</h3><p><strong>${escape(reportRevisionLabel(p))}</strong></p><p>${escape(p.takeaway)}</p>${badge(t('{status} evidence',{status:t(p.evidence_status)}),p.evidence_status)}<div class="small">${h('Report series (not experiment ID):')} ${escape(p.branch)}</div><p class="small">${escape(t('{ready} actions ready · {waiting} waiting',{ready:p.actions.filter(a=>a.runnable).length,waiting:p.actions.filter(a=>a.state==='waiting').length}))}</p></button>`;}).join('') || `<p class="empty">${h('No matching reports.')}</p>`;
-  document.querySelectorAll('[data-packet]').forEach(button=>button.onclick=()=>{selected=button.dataset.packet;detailSignature='';render();});
+  document.querySelectorAll('[data-packet]').forEach(button=>button.onclick=()=>{if(OFFLINE)chooseReport(button.dataset.packet);else openReport(button.dataset.packet);});
 }
 function compareView(p,raw){
   if(!raw.previous)return '';
@@ -155,9 +164,47 @@ function compareView(p,raw){
   return `<details><summary>${h('Compare with revision')} ${previous.revision}</summary><p class="small">${h('Same branch. Different contracts or evaluation scopes must not share a leaderboard.')}</p><p><strong>${h('Previous finding:')}</strong> ${escape(previous.takeaway)}</p><p><strong>${h('Previous decision:')}</strong> ${escape(previous.decision)}</p><div class="table-scroll"><table><thead><tr>${['Metric','Previous','Current','Comparison'].map(k=>`<th>${h(k)}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }
 function feedbackView(p,events){
-  const form=OFFLINE?`<p>${h('This exported snapshot is read-only. Open the local live inbox to send feedback.')}</p>`:`<p class="small">${h('A comment is advisory. Approval applies only to the selected action and this report revision. Pause takes effect at the next safe checkpoint of this branch.')}</p><form id="feedback-form"><label for="kind">${h('Response')}</label><select id="kind">${[['comment','Comment / suggest a change'],['approve','Approve a named action'],['reject','Decline a named action'],['pause','Pause this branch at its next checkpoint'],['resume','Resume this branch at its next checkpoint']].map(([key,label])=>`<option value="${key}">${h(label)}</option>`).join('')}</select><div id="action-field"><label for="action-id">${h('Action')}</label><select id="action-id"></select></div><label for="comment">${h('Reason or suggestion')}</label><textarea id="comment" placeholder="${h('What should the next experiment clarify?')}"></textarea><p id="feedback-effect" class="small"></p><button class="primary" id="submit" type="submit">${h('Send feedback')}</button><span id="feedback-status" role="status" class="small"></span></form>`;
+  const form=p.archive_read_only?`<p>${h('Historical revision · read-only. Open the latest report to comment or steer.')}</p><button class="secondary" data-return-latest="${escape(p.latest_packet_id)}">${h('Return to latest report')}</button>`:OFFLINE?`<p>${h('This exported snapshot is read-only. Open the local live inbox to send feedback.')}</p>`:`<p class="small">${h('A comment is advisory. Approval applies only to the selected action and this report revision. Pause takes effect at the next safe checkpoint of this branch.')}</p><form id="feedback-form"><label for="kind">${h('Response')}</label><select id="kind">${[['comment','Comment / suggest a change'],['approve','Approve a named action'],['reject','Decline a named action'],['pause','Pause this branch at its next checkpoint'],['resume','Resume this branch at its next checkpoint']].map(([key,label])=>`<option value="${key}">${h(label)}</option>`).join('')}</select><div id="action-field"><label for="action-id">${h('Action')}</label><select id="action-id"></select></div><label for="comment">${h('Reason or suggestion')}</label><textarea id="comment" placeholder="${h('What should the next experiment clarify?')}"></textarea><p id="feedback-effect" class="small"></p><button class="primary" id="submit" type="submit">${h('Send feedback')}</button><span id="feedback-status" role="status" class="small"></span></form>`;
   const receipts=events.length?events.map(e=>`<div class="receipt">${badge(t(e.status),e.status==='stale'?'waiting':e.status==='applied'?'ready':'')}<strong>${escape(t(e.body.kind))}${e.body.action_id?' · '+escape(e.body.action_id):''}</strong><div class="small">${date(e.created)} · ${escape(e.body.packet_id)}</div>${e.body.comment?`<blockquote>${escape(e.body.comment)}</blockquote>`:''}<div>${escape(t(e.reason||'Received. Waiting for the next safe checkpoint; no execution policy has changed yet.'))}</div>${e.checkpoint?`<div class="small">${h('Checkpoint:')} ${escape(e.checkpoint)}</div>`:''}</div>`).join(''):`<p class="small">${h('No feedback yet. Reading is optional for already authorized actions.')}</p>`;
   return `<h3>${h('Feedback at your pace')}</h3><div class="feedback">${form}</div><h3>${h('Feedback receipts')}</h3>${receipts}`;
+}
+function renderHistory(){
+  const page=historyPage;$('history-first').disabled=!page;$('history-latest').disabled=!page;const selectedReport=reportById(selected);$('history-older').disabled=!selectedReport?.revision_navigation?.older;$('history-newer').disabled=!selectedReport?.revision_navigation?.newer;
+  if(!page){$('history-count').textContent=OFFLINE?t('History is unavailable in this exported snapshot.'):t('Loading report history…');return;}
+  $('history-series').innerHTML=page.series.map(s=>`<option value="${escape(s.branch)}">${escape(s.branch)} · ${escape(s.count)} ${h('revisions')}</option>`).join('');$('history-series').value=historyBranch;
+  $('history-revision').innerHTML=`<option value="">${h('Choose a revision')}</option>`+historyItems.map(p=>`<option value="${escape(p.id)}">r${p.revision} · ${escape(date(p.published))} · ${escape(p.translations?.[locale]?.title||p.title)}</option>`).join('');$('history-revision').value=historyItems.some(p=>p.id===selected)?selected:'';
+  const series=page.series.find(s=>s.branch===historyBranch);$('history-count').textContent=t('{loaded} of {total} revisions loaded · stored range r{first}–r{last}',{loaded:historyItems.length,total:page.total,first:series?.oldest_revision||'?',last:series?.latest_revision||'?'})+(pinRevision?' · '+t('Historical revision pinned'): '');$('history-more').hidden=page.next_offset===null;
+}
+async function loadHistory(branch,more=false){
+  if(OFFLINE||!branch)return;const request=++historyRequest;if(!more){historyBranch=branch;historyPage=null;historyItems=[];}
+  try{const response=await fetch(`/api/history?branch=${encodeURIComponent(branch)}&offset=${more?historyPage?.next_offset||0:0}&limit=50`,{cache:'no-store'});if(!response.ok)throw new Error('Report history unavailable');const value=await response.json();if(request!==historyRequest||historyBranch!==branch)return;historyPage=value;historyItems=more?[...historyItems,...value.items]:value.items;renderHistory();}
+  catch(error){if(request===historyRequest)$('history-count').textContent=t(error.message);}
+}
+async function openReport(id){
+  if(OFFLINE)return;const request=++reportRequest;
+  try{const response=await fetch(`/api/report/${encodeURIComponent(id)}`,{cache:'no-store'});if(!response.ok)throw new Error('Report revision unavailable');const value=await response.json();if(request!==reportRequest)return;archivePacket=value.packet;archiveFeedback=value.feedback||[];pinRevision=value.packet.archive_read_only;selected=id;selectedBranch=value.packet.branch;detailSignature='';render();}
+  catch(error){notify(error.message);}
+}
+function setDashboardView(view){dashboardView=view;$('reports-layout').hidden=view!=='reports';$('experiment-history').hidden=view!=='experiments';if(view==='experiments'&&!OFFLINE)loadExperiments();}
+function renderExperiments(){
+  $('experiment-count').textContent=experimentError?t(experimentError):experimentPage?t('{loaded} of {total} experiments shown',{loaded:experimentItems.length,total:experimentPage.total}):t('Loading experiments…');
+  $('experiment-list').innerHTML=experimentItems.map(e=>`<section class="action"><button class="source" data-experiment="${escape(e.id)}"><strong>${escape(e.title)}</strong></button> ${badge(t(e.state))} ${e.outcome?badge(t(e.outcome)):''}<p class="small">${escape(e.id)} · ${h('Started:')} ${date(e.started_at)}${e.finished_at?' · '+h('Finished:')+' '+date(e.finished_at):''}</p><p>${escape(e.question)}</p><p>${h('Charged / reserved seconds:')} ${escape(e.charged_seconds)} / ${escape(e.reserved_seconds)}</p>${(e.reports||[]).map(p=>`<button class="source" data-experiment-report="${escape(p.id)}">${escape(p.id)}</button>`).join(' · ')}${e.recovery_id?`<p>${h('Fresh procedural recovery:')} ${escape(e.recovery_id)} · ${escape(e.recovery_of)}</p>`:''}</section>`).join('')||`<p>${h('No matching experiments.')}</p>`;$('experiment-more').hidden=!experimentPage||experimentPage.next_offset===null;
+  document.querySelectorAll('[data-experiment]').forEach(b=>b.onclick=()=>openExperiment(b.dataset.experiment));
+  document.querySelectorAll('[data-experiment-report]').forEach(b=>b.onclick=()=>{setDashboardView('reports');openReport(b.dataset.experimentReport);});
+  if(!experimentDetail)return;const e=experimentDetail.experiment;
+  $('experiment-detail').innerHTML=`<h2>${escape(e.title)}</h2><p>${escape(e.id)} · ${badge(t(e.state))}${e.outcome?badge(t(e.outcome)):''}</p><p>${escape(e.question)}</p><p>${h('Charged / reserved seconds:')} ${escape(e.charged_seconds)} / ${escape(e.reserved_seconds)}</p><p>${escape(e.summary)}</p>${(e.units||[]).map(u=>`<p>${h('Verified process:')} ${escape(t(u.process?.live?'live':'not live'))} · PID ${escape(u.process?.pid||'—')} · ${h('Elapsed / ceiling (seconds):')} ${escape(u.elapsed_seconds??'—')} / ${escape(u.ceiling_seconds)}${u.progress?' · '+h('Durable progress:')+' '+escape(u.progress.completed):''}</p>`).join('')}<p class="small">${h('Intermediate fit count is unknown unless emitted by the experiment. Finished execution is not promotion.')}</p>${e.results?`<details open><summary>${h('Validated result metrics')}</summary><pre>${escape(JSON.stringify(e.results,null,2))}</pre></details>`:''}${(e.next_decisions||[]).length?`<h3>${h('What happened next')}</h3>${e.next_decisions.map(r=>`<p>${escape(r.selected_candidate||'')} · ${escape(r.next_checkpoint||'')}</p>`).join('')}`:''}<h3>${h('Linked report revisions')}</h3>${(e.reports||[]).map(p=>`<p><button class="source" data-experiment-report="${escape(p.id)}">${escape(p.id)}</button> · ${date(p.published)}</p>`).join('')}<h3>${h('Evidence')}</h3>${(e.sources||[]).map((s,i)=>`<p><button class="source" data-experiment-source="${i}">${escape(s.label)}</button> · SHA-256 ${escape(s.sha256.slice(0,12))}</p>`).join('')}`;
+  document.querySelectorAll('[data-experiment-report]').forEach(b=>b.onclick=()=>{setDashboardView('reports');openReport(b.dataset.experimentReport);});
+  document.querySelectorAll('[data-experiment-source]').forEach(b=>b.onclick=()=>showEvidence({id:e.id,sources:e.sources,experiment:true},Number(b.dataset.experimentSource)));
+}
+async function loadExperiments(more=false){
+  if(OFFLINE)return;const request=++experimentRequest;const query=$('experiment-search').value||'',status=$('experiment-filter').value||'all';
+  try{const response=await fetch(`/api/experiments?offset=${more?experimentPage?.next_offset||0:0}&limit=30&search=${encodeURIComponent(query)}&status=${encodeURIComponent(status)}`,{cache:'no-store'});if(!response.ok)throw new Error('Experiment history unavailable');const value=await response.json();if(request!==experimentRequest)return;experimentError=value.available===false?value.reason:null;experimentPage=value;experimentItems=more?[...experimentItems,...value.items]:value.items;renderExperiments();}
+  catch(error){if(request===experimentRequest){experimentError=error.message;renderExperiments();}}
+}
+async function openExperiment(id){
+  if(OFFLINE)return;experimentSelected=id;const request=++experimentDetailRequest;
+  try{const response=await fetch(`/api/experiment/${encodeURIComponent(id)}`,{cache:'no-store'});if(!response.ok)throw new Error('Experiment detail unavailable');const value=await response.json();if(request!==experimentDetailRequest||experimentSelected!==id)return;experimentDetail=value;renderExperiments();}
+  catch(error){if(request===experimentDetailRequest)$('experiment-detail').textContent=t(error.message);}
 }
 function renderFreshness(){
   $('refresh-now').hidden=OFFLINE;
@@ -175,30 +222,34 @@ function liveStatusView(){
 }
 function render(){
   if(!data)return;
-  if(!data.packets.some(p=>p.id===selected)){
+  if(!reportById(selected)){
+    if(selected&&!OFFLINE&&typeof fetch==='function'&&data.history_available&&!archivePacket){openReport(selected);return;}
     const old=selected,same=data.packets.find(p=>p.branch===selectedBranch||p.previous?.id===old);
     selected=(same||data.packets.find(waiting)||data.packets.find(isOverview)||data.packets[0])?.id;
     if(old){detailSignature='';notify(drafts.get(old)?.comment?'A report was superseded. Your previous draft remains in this tab; review the new revision before submitting.':'A newer revision of this report is now shown.');}
   }
-  const selectedPacket=data.packets.find(p=>p.id===selected);selectedBranch=selectedPacket?.branch||selectedBranch;
+  const selectedPacket=reportById(selected);selectedBranch=selectedPacket?.branch||selectedBranch;
+  if(!OFFLINE&&data.history_available&&typeof fetch==='function'&&historyOwnerBranch!==selectedBranch){historyOwnerBranch=selectedBranch;loadHistory(selectedBranch);}
+  renderHistory();
   if(selected&&location.hash.slice(1)!==selected)history.replaceState(null,'','#'+selected);
   renderList();renderFreshness();const liveHtml=liveStatusView();$('live-status').hidden=!liveHtml;
   if($('live-status').innerHTML!==liveHtml)$('live-status').innerHTML=liveHtml;
-  document.querySelectorAll('[data-overview]').forEach(button=>button.onclick=()=>{selected=button.dataset.overview;detailSignature='';render();});
+  document.querySelectorAll('[data-overview]').forEach(button=>button.onclick=()=>{chooseReport(button.dataset.overview);});
   const goalHtml=goalSteeringView();$('goal-steering').hidden=!goalHtml;
   if($('goal-steering').innerHTML!==goalHtml)$('goal-steering').innerHTML=goalHtml;
   $('footer').textContent=t('Snapshot generated {date}.',{date:date(data.generated)})+' '+(data.packets.every(p=>p.historical)?t('Historical reports with illustrative next actions. No research campaign is attached.')+' ':'')+t('Unanswered requests never grant approval. Only the named actions wait.');
-  const raw=data.packets.find(p=>p.id===selected);if(!raw){$('detail').innerHTML=`<p class="empty">${h('Publish a structured experiment packet to begin.')}</p>`;return;}
-  const p=viewPacket(raw),events=data.feedback.filter(e=>e.branch===raw.branch),execution=reportExecutionState(raw);
+  const raw=reportById(selected);if(!raw){$('detail').innerHTML=`<p class="empty">${h('Publish a structured experiment packet to begin.')}</p>`;return;}
+  const p=viewPacket(raw),events=archivePacket?.id===raw.id?archiveFeedback:data.feedback.filter(e=>e.branch===raw.branch),execution=reportExecutionState(raw);
   const signature=JSON.stringify([raw,events,locale,execution]);if(signature===detailSignature)return;detailSignature=signature;
   const canContinue=raw.actions.filter(a=>a.runnable),requires=raw.actions.filter(a=>a.state==='waiting');
   const metrics=p.metrics.map(m=>`<tr><td><strong>${escape(m.name)}</strong><div class="rule">${escape(m.scope)}${m.unit?' · '+escape(m.unit):''}${Number.isInteger(m.support)?' · n='+m.support:''}</div></td><td>${escape(m.baseline)}</td><td>${escape(m.result)}</td><td>${escape(m.rule)}<br><button class="source" data-source="${m.source}">${h('Evidence')}</button></td></tr>`).join('');
   const actions=p.actions.map(a=>`<div class="action">${badge(t(a.state),a.state)}<strong>${escape(a.label)}</strong><p>${escape(t(a.state_reason))}</p></div>`).join('');
-  $('detail').innerHTML=`<div class="topline"><span class="eyebrow">${h('30-second brief')} · ${escape(p.branch)}</span>${!OFFLINE?`<button id="ack" class="secondary">${h('Mark read')}</button>`:''}</div><h2>${escape(p.title)}</h2>${reportIdentityView(p)}<div>${badge(t('{status} evidence',{status:t(p.evidence_status)}),p.evidence_status)}${badge(p.decision)}${p.historical?badge(t('Historical evidence')):''}</div><p class="dim">${escape(p.question)}</p><p class="lead">${escape(p.takeaway)}</p><p><strong>${h('Why it matters:')}</strong> ${escape(p.why_it_matters)}</p>${reportExecutionView(p,execution)}${evidenceReviewView(p,metrics)}${workflowView(p)}${contextChangesView(p)}<div class="box ${requires.length?'attention':''}"><p><strong>${h(requires.length?'Your decision is needed':canContinue.length?'Authorized work can continue':'Review checkpoint · no runnable action in this report')}</strong></p><p>${escape(p.review_question)}</p><p><strong>${h('Recommendation:')}</strong> ${escape(p.recommendation)}</p><p class="small">${h('Review window:')} ${escape(p.review_by)}. ${h('This is a scheduling request, never an automatic approval deadline.')}</p></div><h3>${h('What happens while you review')}</h3><p>${canContinue.length?h('The following authorized actions are ready:')+' '+escape(p.actions.filter(a=>a.runnable).map(a=>a.label).join('; '))+'.':h('This branch has no runnable next action. Other eligible branches remain unaffected.')}</p>${actions}${compareView(p,raw)}<details><summary>${h('Source reports · immutable evidence snapshots')}</summary><ul>${p.sources.map((s,i)=>`<li><button class="source" data-source="${i}">${escape(s.label)}</button><div class="small">${escape(s.path)} · SHA-256 ${escape(s.sha256.slice(0,12))}</div></li>`).join('')}</ul><p class="small">${h('Report')} ${escape(p.id)} · ${escape(t('revision {revision}',{revision:p.revision}))} · ${h('contract')} ${escape(p.contract_id)} · ${h('published')} ${date(p.published)}</p><p class="small">${h('Source evidence and feedback remain in their original language; translations change presentation only.')}</p></details>${feedbackView(p,events)}`;
+  $('detail').innerHTML=`<div class="topline"><span class="eyebrow">${h('30-second brief')} · ${escape(p.branch)}</span>${!OFFLINE&&!p.archive_read_only?`<button id="ack" class="secondary">${h('Mark read')}</button>`:''}</div><h2>${escape(p.title)}</h2>${reportIdentityView(p)}<div>${badge(t('{status} evidence',{status:t(p.evidence_status)}),p.evidence_status)}${badge(p.decision)}${p.historical?badge(t('Historical evidence')):''}</div><p class="dim">${escape(p.question)}</p><p class="lead">${escape(p.takeaway)}</p><p><strong>${h('Why it matters:')}</strong> ${escape(p.why_it_matters)}</p>${reportExecutionView(p,execution)}${evidenceReviewView(p,metrics)}${workflowView(p)}${contextChangesView(p)}<div class="box ${requires.length?'attention':''}"><p><strong>${h(requires.length?'Your decision is needed':canContinue.length?'Authorized work can continue':'Review checkpoint · no runnable action in this report')}</strong></p><p>${escape(p.review_question)}</p><p><strong>${h('Recommendation:')}</strong> ${escape(p.recommendation)}</p><p class="small">${h('Review window:')} ${escape(p.review_by)}. ${h('This is a scheduling request, never an automatic approval deadline.')}</p></div><h3>${h('What happens while you review')}</h3><p>${canContinue.length?h('The following authorized actions are ready:')+' '+escape(p.actions.filter(a=>a.runnable).map(a=>a.label).join('; '))+'.':h('This branch has no runnable next action. Other eligible branches remain unaffected.')}</p>${actions}${compareView(p,raw)}<details><summary>${h('Source reports · immutable evidence snapshots')}</summary><ul>${p.sources.map((s,i)=>`<li><button class="source" data-source="${i}">${escape(s.label)}</button><div class="small">${escape(s.path)} · SHA-256 ${escape(s.sha256.slice(0,12))}</div></li>`).join('')}</ul><p class="small">${h('Report')} ${escape(p.id)} · ${escape(t('revision {revision}',{revision:p.revision}))} · ${h('contract')} ${escape(p.contract_id)} · ${h('published')} ${date(p.published)}</p><p class="small">${h('Source evidence and feedback remain in their original language; translations change presentation only.')}</p></details>${feedbackView(p,events)}`;
   document.querySelectorAll('[data-source]').forEach(button=>button.onclick=()=>showEvidence(raw,Number(button.dataset.source)));
-  document.querySelectorAll('[data-study]').forEach(button=>button.onclick=()=>{selected=button.dataset.study;detailSignature='';render();});
+  document.querySelectorAll('[data-study]').forEach(button=>button.onclick=()=>{openReport(button.dataset.study);});
   document.querySelectorAll('[data-effort]').forEach(button=>button.onclick=()=>document.getElementById(`effort-${button.dataset.effort}`)?.scrollIntoView?.({behavior:'smooth',block:'start'}));
-  if(OFFLINE)return;
+  document.querySelectorAll('[data-return-latest]').forEach(button=>button.onclick=()=>openReport(button.dataset.returnLatest));
+  if(OFFLINE||raw.archive_read_only)return;
   $('ack').onclick=async()=>{try{await sendFeedback(raw,{kind:'ack',action_id:null,comment:''});}catch(error){notify(error.message);}};
   if(isOverview(raw))$('kind').innerHTML=`<option value="comment">${h('Suggest a direction / ask a question (advisory)')}</option>`;
   const draft=drafts.get(raw.id)||{kind:'comment',action_id:'',comment:''};$('kind').value=draft.kind;$('comment').value=draft.comment;
@@ -208,6 +259,7 @@ function render(){
   $('feedback-form').onsubmit=async event=>{event.preventDefault();saveDraft();const value=drafts.get(raw.id);if(['approve','reject'].includes(value.kind)&&!value.action_id){$('feedback-status').textContent=t('Select an action first.');return;}if(value.kind==='comment'&&!value.comment.trim()){$('feedback-status').textContent=t('Add a comment first.');return;}$('submit').disabled=true;try{await sendFeedback(raw,{...value,action_id:['approve','reject'].includes(value.kind)?value.action_id:null});drafts.delete(raw.id);detailSignature='';render();}catch(error){$('feedback-status').textContent=t(error.message);$('submit').disabled=false;}};
 }
 async function sendFeedback(packet,value){
+  if(packet.archive_read_only)throw new Error('Historical revision is read-only');
   const request={id:crypto.randomUUID(),packet_id:packet.id,packet_hash:packet.hash,...value};let response;
   for(let attempt=0;attempt<2;attempt++){try{response=await fetch('/api/feedback',{method:'POST',headers:{'Content-Type':'application/json','X-Review-Token':token},body:JSON.stringify(request)});break;}catch(error){if(attempt===1)throw error;}}
   const result=await response.json();if(!response.ok)throw new Error(t(result.error||'Feedback could not be submitted'));notify('Feedback received. Its receipt below will show when the next safe checkpoint consumes it.');await refresh();
@@ -230,15 +282,15 @@ async function showEvidence(packet,index){
   evidenceState={packet,index,raw:null,error:null,showRaw:false,markdown:/\.md$/i.test(source.path)};
   renderEvidence();$('evidence').showModal();
   try{
-    let raw;if(OFFLINE)raw=source.snapshot;else{const response=await fetch(`/evidence/${encodeURIComponent(packet.id)}/${index}`);if(!response.ok)throw new Error(t('Evidence unavailable'));raw=await response.text();}
+    let raw;if(OFFLINE)raw=source.snapshot;else{const response=await fetch(`/${packet.experiment?'experiment-evidence':'evidence'}/${encodeURIComponent(packet.id)}/${index}`);if(!response.ok)throw new Error(t('Evidence unavailable'));raw=await response.text();}
     if(request!==evidenceRequest)return;evidenceState.raw=raw;renderEvidence();
   }catch(error){if(request===evidenceRequest){evidenceState.error=error.message;renderEvidence();}}
 }
 async function refresh(){
   if(OFFLINE){render();return;}if(polling)return;polling=true;
-  try{const response=await fetch('/api/inbox',{cache:'no-store'});if(!response.ok)throw new Error(t('Inbox unavailable'));data=await response.json();token=data.token;lastRefreshAt=Date.now();refreshError=null;render();document.title=t('Research review inbox');}catch(error){refreshError=error.message;notify(`${t(error.message)}. ${t('Reports remain visible; feedback has not been accepted.')}`);}finally{polling=false;renderFreshness();}
+  try{const response=await fetch('/api/inbox',{cache:'no-store'});if(!response.ok)throw new Error(t('Inbox unavailable'));data=await response.json();token=data.token;lastRefreshAt=Date.now();refreshError=null;if(!pinRevision&&archivePacket&&!data.packets.some(p=>p.id===archivePacket.id)){archivePacket=null;archiveFeedback=[];}render();if(dashboardView==='experiments'){if(experimentSelected)openExperiment(experimentSelected);else loadExperiments();}document.title=t('Research review inbox');}catch(error){refreshError=error.message;notify(`${t(error.message)}. ${t('Reports remain visible; feedback has not been accepted.')}`);}finally{polling=false;renderFreshness();}
 }
-$('refresh-now').onclick=refresh;$('search').oninput=renderList;$('filter').onchange=renderList;$('language').onchange=()=>setLocale($('language').value);$('close-evidence').onclick=()=>{evidenceRequest++;evidenceState=null;$('evidence').close();};$('evidence').onclose=()=>{evidenceRequest++;evidenceState=null;};$('evidence-toggle').onclick=()=>{if(evidenceState){evidenceState.showRaw=!evidenceState.showRaw;renderEvidence();}};
+$('reports-view').onclick=()=>setDashboardView('reports');$('experiments-view').onclick=()=>setDashboardView('experiments');$('history-series').onchange=()=>loadHistory($('history-series').value);$('history-revision').onchange=()=>{if($('history-revision').value)openReport($('history-revision').value);};$('history-first').onclick=()=>{const s=historyPage?.series.find(s=>s.branch===historyBranch);if(s)openReport(s.first_packet_id);};$('history-latest').onclick=()=>{const s=historyPage?.series.find(s=>s.branch===historyBranch);if(s)openReport(s.latest_packet_id);};$('history-older').onclick=()=>{const n=reportById(selected)?.revision_navigation;if(n?.older)openReport(n.older);};$('history-newer').onclick=()=>{const n=reportById(selected)?.revision_navigation;if(n?.newer)openReport(n.newer);};$('history-more').onclick=()=>loadHistory(historyBranch,true);$('experiment-refresh').onclick=()=>{loadExperiments();if(experimentSelected)openExperiment(experimentSelected);};$('experiment-more').onclick=()=>loadExperiments(true);$('experiment-search').onchange=()=>loadExperiments();$('experiment-filter').onchange=()=>loadExperiments();$('refresh-now').onclick=refresh;$('search').oninput=renderList;$('filter').onchange=renderList;$('language').onchange=()=>setLocale($('language').value);$('close-evidence').onclick=()=>{evidenceRequest++;evidenceState=null;$('evidence').close();};$('evidence').onclose=()=>{evidenceRequest++;evidenceState=null;};$('evidence-toggle').onclick=()=>{if(evidenceState){evidenceState.showRaw=!evidenceState.showRaw;renderEvidence();}};
 updateLanguage();refresh();if(!OFFLINE)setInterval(refresh,5000);
 </script>
 </body>

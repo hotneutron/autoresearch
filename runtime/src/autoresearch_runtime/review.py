@@ -14,7 +14,11 @@ import secrets
 import sqlite3
 import subprocess
 import sys
-from urllib.parse import unquote, urlparse
+from urllib.parse import unquote, urlparse, parse_qs
+
+# ## Revision History — 2026-10-21T01:31:00Z: Add read-only history/report and
+# optional trusted experiment-history endpoints; feedback/admission unchanged.
+# Exact user prompt is preserved in review_history.py.
 import uuid
 
 REPO = Path.cwd()
@@ -411,7 +415,7 @@ class Inbox:
                 packets.append(p)
             events = [{**dict(r), "body": json.loads(r["body"])} for r in db.execute("SELECT f.*,p.branch FROM feedback f JOIN packets p ON p.id=f.packet_id ORDER BY f.seq DESC LIMIT 200")]
             jobs = [dict(r) for r in db.execute("SELECT * FROM jobs ORDER BY started DESC LIMIT 100")]
-        result = {"packets": packets, "feedback": events, "jobs": jobs, "generated": now()}
+        result = {"packets": packets, "feedback": events, "jobs": jobs, "generated": now(), "history_available": True}
         # Optional goal-level status is read-only; presentation never instantiates
         # a Controller or grants a campaign permit. Existing stores remain valid.
         contract_path = self.directory / "contract.json"
@@ -427,6 +431,14 @@ class Inbox:
                 except (OSError, ValueError, KeyError, TypeError) as error:
                     result["goal_steering"] = {"state": "goal_review_required", "reason": str(error)}
         return result
+
+    def history(self, branch=None, offset=0, limit=50):
+        from .review_history import catalog
+        return catalog(self, branch, offset, limit)
+
+    def report(self, packet_id):
+        from .review_history import packet
+        return packet(self, packet_id)
 
     def evidence(self, packet_id, index):
         with self.connect() as db:
@@ -485,6 +497,22 @@ def server(inbox, port=8765):
                     self.send(200, inbox.html(), "text/html; charset=utf-8")
                 elif path == "/api/inbox":
                     self.send(200, {**inbox.snapshot(), "token": token})
+                elif path == "/api/history":
+                    query = parse_qs(urlparse(self.path).query)
+                    self.send(200, inbox.history(query.get('branch',[None])[0], query.get('offset',[0])[0], query.get('limit',[50])[0]))
+                elif re.fullmatch(r"/api/report/[A-Za-z0-9_.-]+", path):
+                    self.send(200, inbox.report(unquote(path.rsplit('/',1)[1])))
+                elif path == "/api/experiments":
+                    query = parse_qs(urlparse(self.path).query)
+                    if hasattr(inbox, 'experiments'):
+                        self.send(200, inbox.experiments(offset=query.get('offset',[0])[0],limit=query.get('limit',[30])[0],search=query.get('search',[''])[0],status=query.get('status',['all'])[0]))
+                    else:
+                        self.send(200, {'available':False,'items':[],'total':0,'reason':'No experiment history provider is attached'})
+                elif re.fullmatch(r"/api/experiment/[A-Za-z0-9_.-]+", path) and hasattr(inbox, 'experiment'):
+                    self.send(200, inbox.experiment(unquote(path.rsplit('/',1)[1])))
+                elif re.fullmatch(r"/experiment-evidence/[A-Za-z0-9_.-]+/[0-9]+", path) and hasattr(inbox, 'experiment_evidence'):
+                    _, _, campaign, index = path.split('/')
+                    self.send(200, inbox.experiment_evidence(unquote(campaign),int(index)), 'text/plain; charset=utf-8')
                 elif re.fullmatch(r"/evidence/[A-Za-z0-9_.-]+/[0-9]+", path):
                     _, _, packet_id, index = path.split("/")
                     self.send(200, inbox.evidence(unquote(packet_id), int(index)), "text/plain; charset=utf-8")

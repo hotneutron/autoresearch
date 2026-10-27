@@ -4,6 +4,8 @@ Prompt verbatim: looks like the review dashboard is no longer updating
 ## Revision History
 - 2026-10-20: Add a project-neutral observation callback; it never dispatches work,
   amends packets, consumes feedback or changes admission/approval state.
+- 2026-10-21T01:31:00Z: Delegate immutable report history and optional trusted
+  experiment history read-only, no permission or scientific-state changes.
 """
 from __future__ import annotations
 
@@ -60,6 +62,23 @@ class LiveInbox:
 
     def evidence(self, *args, **kwargs):
         return self.inbox.evidence(*args, **kwargs)
+
+    def history(self, *args, **kwargs):
+        return self.inbox.history(*args, **kwargs)
+
+    def report(self, *args, **kwargs):
+        return self.inbox.report(*args, **kwargs)
+
+    def experiments(self, *args, **kwargs):
+        if hasattr(self.inbox, 'experiments'):
+            return self.inbox.experiments(*args, **kwargs)
+        return {'available':False,'items':[],'total':0,'reason':'No experiment history provider is attached'}
+
+    def experiment(self, *args, **kwargs):
+        return self.inbox.experiment(*args, **kwargs)
+
+    def experiment_evidence(self, *args, **kwargs):
+        return self.inbox.experiment_evidence(*args, **kwargs)
 
     def submit(self, *args, **kwargs):
         return self.inbox.submit(*args, **kwargs)
