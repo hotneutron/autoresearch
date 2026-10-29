@@ -21,6 +21,22 @@ human branch pause. Stop the controller with Ctrl-C; detached experimental units
 keep running to their bounded timeout and retain resource leases. Reopen with the
 same installed runtime and store to reconcile their receipts.
 
+## Distributed POC · 0.6.0
+
+The opt-in `autoresearch-dist` command adds a coordinator-local SQLite authority,
+portable peer-repository contracts, anonymous API/evidence read/write hosting,
+qualified-positive frontier/review records, and a source agent with a systemd
+supervision interface. See [distributed POC](docs/distributed-poc.md) for commands,
+configuration and the current verification boundary. Real executor and two-host
+qualification are deferred; portable simulations do not qualify infrastructure.
+Legacy scientific protocol/store versions remain unchanged.
+
+```bash
+autoresearch-dist --store /durable/research preflight
+autoresearch-dist --store /durable/research serve --port 8766
+autoresearch-dist --store /durable/research status
+```
+
 ## Complete review history · 0.5.8
 
 [Complete review history](docs/review-history.md) adds two deliberately separate
@@ -300,3 +316,5 @@ fix the issue then continue.
 | r12 | 2026-10-20 | Documented0.5.7 read-only live observation/freshness and same-branch revision following, separate from immutable evidence and scientific authority; exact request in live-review-freshness.md. |
 | r13 | 2026-10-20T23:44:00+00:00 | Linked exact report/global execution scope and E-index/reportrevision/experimentidentity guides; prepared focused review-source commit under exact user request in docs/20261020-commit-review-changes.md, no scientific runtime change. |
 | r14 | 2026-10-21T03:15:00+00:00 | Documented0.5.8 paginated immutable report history and complete read-only experiment timeline under the exact dashboard visibility request in docs/review-history.md; scientific protocol/store versions unchanged. |
+
+| r15 | 2026-10-28 | Added opt-in distributed POC commands and linked qualification/deployment boundaries under the execution request preserved in docs/distributed-poc.md and milestone trackers. |

@@ -12,6 +12,10 @@ import time
 
 from .protocol import atomic_json, verify_binding, verdict
 
+# ## Revision History
+# - 2026-10-28: W01 requires normal completion before scientific acceptance;
+#   execution request is preserved in .plan/trackers/m0-contracts-and-correctness.md.
+
 
 def process_identity(pid):
     try:
@@ -58,7 +62,7 @@ def execute(spec_path, lease_fds=()):
             result["returncode"] = rc
         verify_binding(spec)
         result["verifier"] = verdict(spec["verdict"])
-        result["scientific_pass"] = rc == 0 and result["verifier"]["passed"]
+        result["scientific_pass"] = result["execution_status"] == "completed" and rc == 0 and result["verifier"]["passed"]
         result["evidence_status"] = "valid" if result["scientific_pass"] else "invalid"
     except BaseException as error:
         result["reason"] = str(error)

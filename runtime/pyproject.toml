@@ -9,7 +9,7 @@ name = "autoresearch-runtime"
 #   protocol/store versions unchanged.
 # - 2026-10-21T03:15:00Z: Review-only immutable report navigation and complete
 #   experiment timeline; scientific protocol/store versions unchanged.
-version = "0.5.8"
+version = "0.6.0"
 description = "Durable research execution and asynchronous review inbox"
 requires-python = ">=3.11"
 dependencies = []
@@ -17,9 +17,15 @@ dependencies = []
 [project.scripts]
 autoresearch = "autoresearch_runtime.cli:main"
 autoresearch-review = "autoresearch_runtime.review:main"
+autoresearch-dist = "autoresearch_runtime.dist_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-autoresearch_runtime = ["inbox.html", "zh-CN.json", "markdown.js"]
+autoresearch_runtime = ["inbox.html", "zh-CN.json", "markdown.js", "fleet.html"]
+
+# ## Revision History
+# - 2026-10-28: Package the opt-in distributed fleet view; request in milestone trackers.
+
+# - 2026-10-28: Version 0.6.0 adds opt-in distributed protocol/store v1; legacy scientific versions remain v2.

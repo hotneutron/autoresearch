@@ -26,6 +26,10 @@ from .worker import alive
 
 STEERING = {"CONTINUE", "DIAGNOSE", "PIVOT", "ADVANCE", "DEFER", "STOP", "ASK_HUMAN"}
 
+# ## Revision History
+# - 2026-10-28: Reject contradictory terminal receipts without changing their
+#   immutable bytes; execution request is preserved in the M0 tracker.
+
 
 class Controller:
     def __init__(self, directory, config=None):
@@ -264,6 +268,13 @@ class Controller:
                 if process.exists() and alive(json.loads(process.read_text())):
                     continue
                 result = json.loads(receipt.read_text())
+                if result.get("execution_status") != "completed" and (
+                    result.get("scientific_pass") is True or result.get("evidence_status") == "valid"
+                ):
+                    with self.inbox.connect(write=True) as db:
+                        db.execute("UPDATE units SET state='reconciliation_required' WHERE id=?", (row["id"],))
+                        self.event(db, "invalid_terminal_receipt", {"unit": row["id"], "receipt_sha256": sha256(receipt)})
+                    continue
                 # Consume responses to the current packet before superseding it.
                 self.inbox.checkpoint(row["branch"], "completed-" + row["id"])
                 task = json.loads(row["spec"])

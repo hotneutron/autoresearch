@@ -1,11 +1,11 @@
 # Plan: Distributed Candidate Evaluation and Auditable HTTPS Review
 
 Created: 2026-10-28T12:05:36-07:00
-Refreshed: 2026-10-28T16:13:07-07:00
+Refreshed: 2026-10-28T19:31:56-07:00
 Status: proposed; implementation and deployment are pending.
 Framework baseline: `hotneutron/autoresearch` master at `33ef750face59b42f9663c8e355a77600d1765e7`, optional runtime `0.5.8`.
 Design input: [1503 adoption assessment](261028-1503-fork-feature-adoption-priorities.md), SHA-256 `e86122cfdee72ba842a856f634940fb5f6f8d6ff37ef711067272aed222cf2dc`.
-Target: one subject-project coordinator, multiple source Linux hosts, and a separately authorized HTTPS review service.
+Target: one subject-project coordinator, multiple source Linux hosts, and anonymous HTTPS review/integration APIs during the POC.
 
 ## User Prompts, Verbatim
 
@@ -45,6 +45,10 @@ refresh the 1205 from scratch again for the distributed candidate eval.
 ```
 
 
+```text
+allow https anonymous API/evidence reads and writes for now (POC phase).
+```
+
 ## Intended Result and Scope
 
 Distribute a finite hypothesis slate across multiple Linux hosts. Each host runs a
@@ -55,8 +59,8 @@ qualification/selection, budget, and application of independent reviewer decisio
 
 Retain at most k validated-positive paths globally, then require an independent
 reviewer to approve the exact successor slate before any host starts that iteration.
-Host the review dashboard at an authenticated HTTPS URL accessible on public or
-private networks. Plans, candidate lineage, artifacts, responses/replies, and applied
+Host the review dashboard at a public or private HTTPS URL with anonymous API/evidence
+reads and writes in the explicit `anonymous_poc` access profile. Plans, candidate lineage, artifacts, responses/replies, and applied
 decisions remain auditable across hosts and across both Git repositories.
 
 This is distributed candidate search. Candidate units can be independent processes
@@ -76,7 +80,8 @@ expansion. The [1147 safety plan](261028-1147-todo-with-priority.md) remains pre
 The control plane and review service can share a server while running under different
 roles and processes. Global authority resides behind the coordinator API; the review
 mirror presents records and queues messages. Each source agent initiates outbound
-HTTPS calls and enforces the signed/authorized assignment locally.
+HTTPS calls and enforces the coordinator-issued assignment and domain gates locally.
+POC callers have self-reported identities; verified client identity is deferred.
 
 ```mermaid
 flowchart TB
@@ -84,7 +89,7 @@ flowchart TB
     SG["Subject Git: plans, verifier, candidate snapshots"]
     B["Browser and independent reviewer"]
     subgraph CENTRAL["Central services"]
-        API["HTTPS gateway and role authentication"]
+        API["HTTPS gateway: anonymous POC access"]
         REVIEW["Review service and message queue"]
         C["Single active project coordinator"]
         G[("Coordinator SQLite: global round, budget, ownership and exposure")]
@@ -112,8 +117,8 @@ flowchart TB
     SG -->|"Frozen plans and snapshots"| C
     B --> API
     API --> REVIEW
-    REVIEW -->|"Trusted bound decisions"| C
-    API -->|"Authenticated agent RPC"| C
+    REVIEW -->|"Bound decisions with POC assurance"| C
+    API -->|"Anonymous POC agent RPC"| C
     C --> G
     AA -->|"Poll, claim, heartbeat, receipts"| API
     AB -->|"Poll, claim, heartbeat, receipts"| API
@@ -137,14 +142,14 @@ flowchart TB
 | Global metadata store | Coordinator-owned SQLite for transactional round/unit/attempt ownership, global budget/capacity, reviewer application, confirmation exposure, outbox/events and historical imports. |
 | Source execution agent | Advertises registered capacity/profile, prepares snapshots, persists launch intent, obtains launch authorization, supervises assigned work, and retries receipt delivery. It does not admit its own search rounds. |
 | Local supervisor/executor | Owns process/container identity, hard deadline, cancellation and local CPU/GPU leases even when the agent or coordinator disappears. |
-| Review service | Authenticated reports, evidence, replies and reviewer queue. Its mirror cannot independently grant execution permits or mark a global decision applied. |
+| Review service | Anonymous POC reports/evidence reads and declared writes, replies and reviewer queue. Its mirror records decisions; the coordinator applies them through global gates. |
 | Artifact archive | Immutable/versioned candidate objects, manifests, selected outputs, receipts, review/message payloads and sealed audit segments. |
 | Subject promotion writer | One designated writer updates retained shared subject branches and integration proposals after the global review gate. |
 
 Use SQLite as the default global metadata store for the initial distributed release.
 Keep one authoritative `coordinator.sqlite3` on the coordinator server's persistent
 local disk or block volume, with one active coordinator per subject and coordinator-
-owned writes. Host agents access global state through authenticated HTTPS APIs.
+owned writes. Host agents access global state through anonymous POC HTTPS APIs.
 Host-local recovery/outboxes and the review mirror may use their own SQLite files.
 
 ### SQLite transaction and durability policy
@@ -224,13 +229,13 @@ closure and local output path. Rebinding is allowed only within the frozen profi
 |---|---|
 | `ExperimentSpec` | Verbatim instruction, both Git refs, allowed mutation surface, evaluator/metric/guard, baseline/input versions, comparison protocol and supported cost dimensions. |
 | `RoundPlan` | Project/goal/context, unique round and parent paths, complete candidate/task graph, N/C_global/k, qualification/confirmation and maximum complete route cost. |
-| `HostRegistration` | Authorized host ID, boot identity, compatible agent/protocol, capability/profile, local concurrency and resource classes. |
+| `HostRegistration` | Registered host ID/boot label, agent/protocol and capability/resource profile; caller identity is self-reported in POC mode and verified in authenticated mode. |
 | `UnitSpec` | Globally unique candidate/unit/phase/replicate IDs, portable contract hash, expected snapshot/input/evaluator, eligible profiles, prerequisites and bounded resources/deadline. |
 | `AssignmentGrant` | Unit/attempt ID, assigned host/boot, generation/nonce, start window, hard execution deadline and resource/budget reservations. |
 | `HostBinding` | Portable hash, host identity, resolved roots/argv, local closure/profile and supervisor job identity. |
 | `ExecutionReceipt` | Unit/attempt/grant and host binding, actual terminal status/cost, process/container identity, output/evidence versions/hashes and producer sequence. |
 | `SelectionRecord` | Complete round inventory, qualified positives, exclusions, comparator/cohort/diversity, at most k selected paths and evidence hashes. |
-| `ReviewReceipt` | Trusted independent actor, exact round/selection/report/evidence/next-slate hashes, both Git refs and authorized scope/budget. |
+| `ReviewReceipt` | Exact round/selection/report/evidence/next-slate hashes, both Git refs and allowed scope/budget; POC actor labels are optional/self-reported with explicit identity assurance. |
 | `PlanDelta` | Evidence-backed before/after fields, inherited conditions, expected effects, content hash and next subject plan/scope. |
 
 Global IDs remain stable under retries; `attempt_id` records a distinct physical
@@ -388,9 +393,12 @@ flowchart TD
 
 Review the global comparison/selection and exact next slate, including rejected paths,
 remaining cost, both Git refs, evidence/qualification hashes and any confirmation plan.
-Verify reviewer authorization and separation from candidate authors/proposers at the
-coordinator. First use an independent human; automated review needs its own service
-identity and evidence-only role. Self-reported names/model aliases do not prove identity.
+During POC, independent review is a procedural participant responsibility. Accept a
+valid anonymous review decision with optional self-reported actor/reviewer labels;
+record `actor_assurance=poc_anonymous` and the stated independence rationale. Apply
+its exact evidence/slate binding through the coordinator once other gates pass.
+The UI must label identity/independence as unverified. Authenticated mode later
+requires trusted principals and author/proposer separation; model aliases are metadata.
 
 The global checkpoint commits application once, then allows successor admission.
 No host advances its own path or applies a local reviewer reply to create another
@@ -482,10 +490,10 @@ baseline, failure and confirmation regardless of elapsed speedup.
 | Framework implementation/protocols | Autoresearch Git and qualified release metadata. | Framework commit/package pin. |
 | Scientific goal/plans/slates/verifier and accepted amendments | Subject Git. | Exact plan/code snapshots and small manifest/result summaries. |
 | Global rounds, budgets, assignments, reviewer application and exposure | Coordinator-owned SQLite on persistent local storage. | Sealed canonical event/manifest exports; API views. |
-| Local launch, process identity, terminal result and retries | Host-local durable ledger and supervisor. | Host-attested receipts/outboxes linked to global attempts. |
+| Local launch, process identity, terminal result and retries | Host-local durable ledger and supervisor. | Host-reported receipts/outboxes linked to global attempts and access-profile assurance. |
 | Candidate code/configuration and raw/selected outputs | Subject objects and source run directories while active. | Versioned archive with key/version/hash and access class. |
 | Released evidence/scientific responses | Canonical source/evaluator records validated against the expected global unit. | Immutable reports/evidence and public response records. |
-| Human prompts/replies/reviewer decisions | Authenticated review queue on acceptance; global ledger on decision application. | Immutable text, reply-parent links, issuer identity and decision/checkpoint receipts. |
+| Human prompts/replies/reviewer decisions | Anonymous POC review queue on acceptance; global ledger on decision application. | Immutable text, reply-parent links, self-reported labels/assurance and decision/checkpoint receipts. |
 | Agent acknowledgement/adoption/defer/reject response | Originating public message/steering record. | Linked global checkpoint, next plan delta and subject commit. |
 | Scratch and unsent drafts | Disposable local workspace/browser memory. | Persist only when promoted to accepted messages/artifacts. |
 
@@ -507,7 +515,7 @@ flowchart LR
 ```
 
 Every event records global IDs, host/boot/attempt identity where relevant, durable
-producer sequence, authenticated actor, occurrence/receipt times, causal parents,
+producer sequence, actor label plus access-profile/identity assurance, occurrence/receipt times, causal parents,
 immutable payload/hash and visibility. A message has `conversation_id`/`in_reply_to`;
 edits/cancellations append superseding records. Delivery-status rows are projections.
 Preserve actual public responses and public rationale, separately from raw execution
@@ -516,7 +524,7 @@ output and measured support. Historical missing actors/parents/times are disclos
 Retain local-durable, server-committed and archive-verified states separately. Commit
 receipts/budgets idempotently; verify referenced blobs before evidence qualification.
 Archive acknowledgements are distinct from HTTP message acceptance. Stable artifact
-key/version/hash identities resolve to authenticated download links; expiring URLs
+key/version/hash identities resolve to anonymous HTTPS links for published POC evidence; expiring URLs
 are delivery links. Private inputs/labels remain in authorized registries/executor
 stores; archive only approved released content and appropriately restricted raw data.
 
@@ -535,18 +543,52 @@ of a live dashboard, with omitted/missing restricted inputs explicitly disclosed
 
 ## HTTPS APIs and Global Decision Delivery
 
-Co-hosting is optional. Use a TLS gateway with renewal and OIDC authentication for
-browser viewer/reviewer roles. Backend listeners are private/local. Protect HTML,
-all history/experiment/evidence APIs, and writes. Validate configured external
-Host/Origin, strip caller identity/forwarded headers, require same-origin browser
-request protection and the existing request token, and retain historical read-only
-behavior. A process-wide token alone is not user authentication.
+### POC access profile
 
-Host agents have distinct revocable project/host-scoped credentials. Coordinator
-assignment/admission writes, artifact producer rights, human reviewer decisions and
-promotion permissions are different roles. A host can publish/query its own grant
-and results but cannot forge reviewer identity, alter a round, reserve extra budget,
-or create another host's execution ownership.
+Use `access_mode=anonymous_poc` by default for the POC. Serve HTTPS with a valid
+server certificate and renewal; every declared public API/evidence read and write
+accepts requests without login, cookies, API keys, bearer credentials, mTLS client
+certificates, verified roles or `X-Review-Token`. Host/source integration APIs use the
+same credential-free profile. Anonymous means no client authentication requirement,
+including for writes; the current loopback server's token policy is not the hosted
+POC policy.
+
+| POC surface | Anonymous behavior |
+|---|---|
+| Dashboard, report/history/experiment APIs and published evidence/downloads | GET/read is public. |
+| Report/evidence publication and versioned uploads | Accept schema-valid writes and verify hashes/limits; conflicting immutable IDs fail. |
+| Prompts/replies, review decisions and supported control actions | Accept valid anonymous writes; record optional actor labels and POC assurance. |
+| Host enrollment/capacity, claims/start, heartbeat/query/cancel and receipt/event commits | Accept valid anonymous integration operations with required project/unit/grant/generation fields. |
+
+Schema validation, immutable evidence/content IDs, portable contract binding,
+idempotency, budget/resource/exposure limits and global round/review application
+remain normal business checks. Grant nonces/generations correlate execution state;
+they are not client-login credentials. POC acceptance must not be blocked merely
+because the sender has no identity/role proof, cookie or request token. Unsupported
+methods and invalid/stale/conflicting mutations retain their ordinary errors.
+
+Support credential-free CORS/OPTIONS on declared API/evidence routes, using
+`Access-Control-Allow-Origin: *`, the route's supported methods/headers and no
+credentialed-cookie requirement. CLI clients may omit Origin. Browser callers from
+other origins may use the POC API. Frontend/source SDKs follow the selected profile
+and omit login/CSRF/token prerequisites in this mode.
+
+Record anonymous/self-reported caller, reviewer and host assurance rather than claim
+verified authorship or enforced independence. The coordinator still owns assignment,
+qualification and next-round application; an anonymous submitted reviewer decision
+can advance a correctly bound slate through those gates. Published POC evidence is
+public through HTTPS. Raw unpublished inputs, database files, private labels and
+storage-service credentials retain their existing non-public storage placement;
+backend archive access can be brokered through the anonymous evidence API.
+
+### Authenticated profile after POC
+
+Keep `access_mode=authenticated` as a later opt-in profile. It adds OIDC viewer/reviewer
+permissions, trusted actor/source principals, project/host-scoped credentials, verified
+reviewer/author separation, and browser origin/request protection. Configure external
+Host routing and strip untrusted identity headers; no caller-provided role label is
+proof. The POC readiness gate does not depend on deploying this profile. The 1503
+assessment's authenticated donor patterns guide this later profile.
 
 Proposed integration operations are enroll/capacity, claim, prepare/start authorization,
 heartbeat/query, cancel acknowledgement, terminal receipt/artifact commit and event
@@ -564,7 +606,7 @@ sequenceDiagram
     participant S as Local supervisor
     participant O as Artifact archive
     A->>H: Poll and claim with registered host capacity
-    H->>C: Verified host request
+    H->>C: Schema-valid request and self-reported host
     C->>G: Atomic ownership, capacity and budget checks
     G-->>C: Assignment grant and generation
     C-->>A: Frozen unit and bounded grant
@@ -582,7 +624,7 @@ sequenceDiagram
     H->>C: Validate attempt, bindings and evidence
     C->>G: Reconcile outcome and deduplicate charge
     R->>H: Review global selection and approve exact next slate
-    H->>C: Trusted actor and bound decision
+    H->>C: Anonymous actor label, assurance and bound decision
     C->>G: Apply once at global round checkpoint
     A->>H: Poll for successor work
     alt Current review applied and admission gates pass
@@ -620,7 +662,7 @@ flowchart TD
     D["D: P1 setup, qualification and independent review"]
     E["E: qualified source agent and partition recovery"]
     F["F: distributed frontier and global reviewer barrier"]
-    MON["G: authenticated federated monitoring"]
+    MON["G: anonymous POC HTTPS monitoring"]
     P2["H: context, plan deltas and richer fleet views"]
     REL["I: two-host canary, migration and release"]
     A --> B
@@ -644,10 +686,10 @@ flowchart TD
 | A — Ownership/portable schema | Dual-repository identity, portable units, host bindings and versioned adoption contracts. | Scientific goal, source roots/rules, inputs, adapter/verifier and comparison cohort. | Same unit materializes correctly on two different root paths without changing canonical identity. |
 | B — P0 source execution | Completed-only acceptance, independent supervisor, hard deadlines/caps, qualified profile and local lease checks. | Declared resource classes/execution profile and bounded fixtures. | Worker/agent loss and TERM-zero cannot produce false positive evidence or unbounded jobs. |
 | C — Global authority | SQLite round/budget/exposure store and transactional outbox, unit ownership, leader epoch, attempt generations, idempotent costs/events and bounded writer transactions. | Scope/rates, historical-charge provenance and global resource policy. | Concurrent claims cannot duplicate active units or exceed global/local caps; restart retains actual grants. |
-| D — P1 scientific/review contracts | ExperimentSpec, finite outputs/guards, qualification, evidence-bound independent receipt and global application. | Positive-effect/statistical/seed and confirmation protocol, reviewer policy. | No malformed metric, noisy best score, self-review or stale slate admits a successor. |
-| E — Owned-host adapter | Authenticated outbound claim/start/query/cancel/receipt API and node daemon integration. | Registered compatible hosts, boot/profile/data availability and credentials. | Lost acknowledgements/partitions reconcile; heartbeat expiry never blindly duplicates work. |
+| D — P1 scientific/review contracts | ExperimentSpec, finite outputs/guards, qualification, evidence-bound review/global application with explicit POC assurance; verified identity is a later profile. | Positive-effect/statistical/seed, confirmation and procedural reviewer policy. | Invalid evidence/stale slate cannot advance; anonymous valid review works and identity assurance is accurately labeled. |
+| E — Owned-host adapter | Anonymous POC outbound claim/start/query/cancel/receipt API and node daemon integration; authenticated profile later. | Registered host/boot/profile/data labels and compatibility. | Credential-free valid calls work; lost acknowledgements/partitions reconcile and heartbeat expiry never blindly duplicates work. |
 | F — Distributed search/Git | Global finite graph, resource scheduling, barrier, qualified top-k, snapshot registry/pools and one promotion writer. | Hypotheses, candidate deltas, diversity/ranking, finite successor slate and retained branch convention. | N/C_global/C_host/k hold globally; next iteration requires one applied independent review. |
-| G — HTTPS/audit track | Authenticated fleet views, canonical namespaced import, event/receipt/artifact transport and offline share exports. | Evidence access/release rules and source presentation adapter. | Complete verifiable history and decision state remain readable during host loss. |
+| G — HTTPS/audit track | Anonymous POC API/evidence reads and writes, fleet views, canonical imports, audit/transport and share exports. | Published-evidence policy and source adapter; identity-assurance labels. | Public read/write and cross-origin/CLI flows work with correct state/history, including host loss. |
 | H — P2 learning/product | Canonical resume packs, evidence-backed failure revisitation, typed PlanDelta/conditions, optional hooks/profiles and richer frontier/reply views. | Accepted scientific revisions and concise conclusions. | An accepted reply becomes a traceable new subject plan/contract, with no silent running-unit mutation. |
 | I — Cutover/release | Store/adapter conformance, Linux/clean-wheel regressions, migration/restore documentation and compatible package. | Two-host controlled canary, reconciled legacy scope/cost and adoption pins. | Distributed search, failure recovery, reviewer/exposure gates and archive restoration pass together. |
 
@@ -681,7 +723,7 @@ stored identities; source and global stores are separate schemas, not shared fil
 
 - **Portable ownership:** two hosts with different checkout/mount paths bind the
   same framework/subject/input/evaluator contract. Reject wrong roots, source drift,
-  incompatible profiles, invalid logical paths and unauthorized host credentials.
+  incompatible profiles and invalid logical paths; valid POC calls require no host credentials.
 - **Global admission:** race C_global+1 claims and duplicate start requests, including
   identical units across hosts. Verify single active ownership, preserved reservations,
   exact charges, leader fencing and valid registered grants after coordinator restart.
@@ -695,22 +737,26 @@ stored identities; source and global stores are separate schemas, not shared fil
 - **Scientific comparison:** matched host baselines, explicit seeds/replicates,
   held-out/qualification scope, hardware strata and multiple-comparison policy.
   Known-positive/negative/noisy fixtures establish global eligibility and at-most-k.
-- **Global review/exposure:** self/forged/stale/wrong-round decisions fail. No host
-  advances before global application. Concurrent confirmation requests cannot reopen
+- **Global review/exposure:** valid anonymous POC review writes are accepted with
+  self-reported/unverified identity labels; stale/invalid/wrong-round decisions fail.
+  Authenticated-mode tests additionally reject forged principals and self-review.
+  No host advances before global application. Concurrent confirmation requests cannot reopen
   a cohort/subject under changed host/branch/campaign names; failed openings count.
 - **Git/archive/audit:** N=24/C_global=8/k=3 across four C_host=2 sources; at most four
   shared subject branches, bounded workspaces, and restore of a losing snapshot.
   Trace both Git refs through host binding, receipt, evidence, response/reviewer reply,
   global checkpoint and successor. Partial/corrupt events and missing blobs fail explicitly.
-- **HTTPS/UI:** deny anonymous API/evidence reads, forged role headers, publisher
-  approval attempts and foreign origins. Test source stale with browser healthy,
+- **HTTPS/UI:** verify anonymous API/evidence reads and writes, including uploads,
+  reviews, integration calls and CORS/OPTIONS without cookies, credentials or tokens.
+  Invalid hashes/schemas, immutable conflicts and stale generations still fail. Test
+  authenticated-profile denial/role/origin checks separately. Test source stale with browser healthy,
   global incomplete-round display, historical pins, complete candidate/reply inventory,
   both locales, draft retention and access-filtered offline bundles.
 - **Regression:** appropriate existing/new source, store/adapter conformance and
   clean-wheel suites plus actual-template JS checks. Execution integrations run on
   Linux. These are planned acceptance checks; no distributed implementation is claimed.
 
-Cut over in stages: authenticated federated reads; one qualified source with global
+Cut over in stages: anonymous POC HTTPS reads/writes; one qualified source with global
 authority; two compatible hosts with failure injection; then increased fleet capacity
 within the reviewed resource envelope. Verify one candidate's complete evidence and
 one deliberately pending then applied global reviewer decision before scaling.
@@ -743,8 +789,8 @@ and no running/unresolved/frozen-environment dependencies.
 
 Resolve subject repositories/rules and both Git pins, portable root mapping, scientific
 qualification/cohort/seed and confirmation definitions, global/local capacities and
-cost dimensions, independent reviewer/issuer policy, host registration/supervision,
-coordinator-local SQLite disk/transaction/backup policy, TLS/login/role scopes, data/artifact access, retention,
+cost dimensions, procedural POC reviewer/actor policy and future authenticated issuer policy, host registration/supervision,
+coordinator-local SQLite disk/transaction/backup policy, TLS/anonymous routes/CORS and future login/role scopes, data/artifact access, retention,
 legacy budget/import evidence, promotion writer, and operational ownership.
 
 P2 keeps context packs factual and bounded, revives failed hypotheses only with changed
@@ -769,3 +815,4 @@ literal donor code and state procedural trust/access limits accurately.
 | r4 | 2026-10-28T15:13:36-07:00 | Rebuilt the plan from scratch using the 1503 assessment: priority-gated donor adaptations, peer Git ownership, frozen setup/reviewer/qualification contracts, bounded frontier and snapshots, persistent audit/HTTPS delivery, work packages and acceptance; added six Mermaid diagrams and preserved prior prompts/history. |
 | r5 | 2026-10-28T15:41:07-07:00 | Rewrote the plan from scratch for distributed candidate evaluation: one global project authority, portable peer-repository contracts, qualified host agents/local supervisors, transactional budget/ownership/exposure, partition-safe reconciliation, global top-k/reviewer gates, bounded subject Git promotion, namespaced audit/HTTPS delivery and staged migration; preserved prompts/r1-r4 and added seven Mermaid diagrams. |
 | r6 | 2026-10-28T16:13:07-07:00 | Adopted coordinator-owned SQLite as the initial global metadata backend; specified single-host authority, atomic ownership/budget/review/exposure/outbox transactions, WAL/full durability, bounded contention and backup/restore checks, with PostgreSQL reserved for demonstrated future needs. |
+| r7 | 2026-10-28T19:31:56-07:00 | Added explicit anonymous_poc HTTPS API/evidence reads and writes, including source integration, credential-free CORS and reviewer submissions; recorded self-reported/unverified identity assurance, deferred authenticated principals to a later profile, and aligned diagrams, work packages and acceptance checks. |

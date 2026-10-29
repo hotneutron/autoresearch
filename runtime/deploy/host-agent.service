@@ -1,0 +1,13 @@
+[Unit]
+Description=Autoresearch source-host agent
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/opt/autoresearch/venv/bin/autoresearch-dist --store /var/lib/autoresearch/source agent /etc/autoresearch/source.json
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

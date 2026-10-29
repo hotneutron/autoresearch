@@ -1,0 +1,50 @@
+{
+  "tests_run": 67,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "elapsed_seconds": 20.418082542018965,
+  "excluded_linux_suites": [
+    "test_confirmation.py",
+    "test_goals.py",
+    "test_runtime.py"
+  ],
+  "real_infrastructure": "explicitly deferred",
+  "prompt_verbatim": "execute the plan with trackers in .plan/trackers/ for each milestone.",
+  "package_version": "0.6.0",
+  "wheel_sha256": "c72ee6b3fbd730e739c13ef54dce22f198824f9a6216c6af9c0d083296be022d",
+  "wheel_name": "autoresearch_runtime-0.6.0-py3-none-any.whl",
+  "installed_cli_preflight": "passed; Linux backend unqualified on macOS",
+  "javascript_suites": {
+    "existing": 5,
+    "fleet_actual_template": 1,
+    "result": "passed"
+  },
+  "coverage": {
+    "mode": "skip",
+    "reason": "No CI coverage threshold; acceptance tests executed"
+  },
+  "revision_history_title": "## Revision History",
+  "revision_history": [
+    {
+      "revision": "r1",
+      "change": "Recorded final installed-wheel portable tests and explicitly deferred real infrastructure."
+    },
+    {
+      "revision": "r2",
+      "timestamp": "2026-10-28T20:42:39-07:00",
+      "change": "Recorded generated-case count, workflow flush and retained portable versus deferred qualification boundary."
+    }
+  ],
+  "new_python_test_methods": 28,
+  "existing_python_test_methods": 39,
+  "unit_test_workflow": {
+    "skill": "bits-unit-test-gen",
+    "flush": "completed",
+    "coverage": "skipped: no configured CI threshold",
+    "source_defects_corrected": [
+      "cooperative timeout acceptance",
+      "contradictory terminal receipt reconciliation"
+    ]
+  }
+}
